@@ -11,12 +11,20 @@ MANAGERS = ADMINS
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.mysql', # Add 'postgresql_psycopg2', 'mysql', 'sqlite3' or 'oracle'.
-        'NAME': 'jm20_phenodb',                      # Or path to database file if using sqlite3.
-        'USER': 'jm20',                      # Not used with sqlite3.
-        'PASSWORD': 'Afan_100',                  # Not used with sqlite3.
-        'HOST': 'mcs4a',                      # Set to empty string for localhost. Not used with sqlite3.
-        'PORT': '3307',                      # Set to empty string for default. Not used with sqlite3.
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'jm20_phenodb',
+        'USER': 'jm20',
+        'PASSWORD': 'Afan_100',
+        'HOST': 'mcs4a',
+        'PORT': '3307',
+    },
+    'warehouse': {
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'warehouse_two_production',
+        'USER': 'warehouse_ro',
+        'PASSWORD': '',
+        'HOST': 'mcs7',
+        'PORT': '3306',
     }
 }
 
@@ -106,7 +114,7 @@ ROOT_URLCONF = 'phenodb.urls'
 WSGI_APPLICATION = 'phenodb.wsgi.application'
 
 TEMPLATE_DIRS = (
-    "/Users/jm20/work/workspace/django_code/phenodb/templates"
+    "/Users/jm20/work/workspace/phenodb/templates"
     # Put strings here, like "/home/html/django_templates" or "C:/www/django/templates".
     # Always use forward slashes, even on Windows.
     # Don't forget to use absolute paths, not relative paths.
