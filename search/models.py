@@ -54,7 +54,7 @@ class AffectionStatusPhenotypeValue(models.Model):
 class QualitativePhenotypeValue(models.Model):
     phenotype = models.ForeignKey(Phenotype)
     individual = models.ForeignKey(Individual)
-    phenotype_value = models.CharField(max_length=100)
+    phenotype_value = models.CharField(max_length=200)
     flagged = models.BooleanField() 
     date_created = models.DateTimeField()
     last_updated = models.DateTimeField()
@@ -62,7 +62,7 @@ class QualitativePhenotypeValue(models.Model):
 class QuantitiatvePhenotypeValue(models.Model):
     phenotype = models.ForeignKey(Phenotype)
     individual = models.ForeignKey(Individual)
-    phenotype_value = models.DecimalField(max_digits=5, decimal_places=2)
+    phenotype_value = models.DecimalField(max_digits=10, decimal_places=2)
     flagged = models.BooleanField() 
     date_created = models.DateTimeField()
     last_updated = models.DateTimeField()
