@@ -5,7 +5,11 @@ from django.contrib import admin
 admin.autodiscover()
 
 urlpatterns = patterns('search.views',
-    url(r'^search/$', 'index'),
+    url(r'^search/$', 'home'),
+#    url(r'^search/results/$', 'results'),
+#    url(r'^search/builder/$', 'builder'),
+#    url(r'^search/(?P<individualidentifier_id>\d+)/results/$', 'results'),
+#    url(r'^search/(?P<individualidentifier_id>\d+)/builder/results/$', 'builderResults'),
     url(r'^admin/', include(admin.site.urls)),
 )
 
