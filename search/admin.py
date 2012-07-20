@@ -7,8 +7,8 @@ import csv
 from django.db import connections
 from decimal import *
 from django.db import IntegrityError
-from django.shortcuts import render
-import sys
+from django.contrib import messages
+from django.db import transaction
 
 class BulkUploadForm(forms.ModelForm):
     file_to_import = forms.FileField()
@@ -30,27 +30,29 @@ class BulkUploadAdmin(admin.ModelAdmin):
     false_list = ["No", "no", "false", "False", "0", '', "Unaffected", "unaffected"]
     
     #Overrides model object saving.
-    def is_number(self, s):
-        try:
-            float(s)
-            return True
-        except ValueError:
-            return False
-        
     def save_model(self, request, obj, form, change):
         records = csv.DictReader(request.FILES["file_to_import"])
         import_data_type = request.POST["import_data_type"]
+        warehouseCursor = connections['warehouse'].cursor()
         for line in records:
             if import_data_type == "Individuals":                
+                
                 ## required columns: Sample ID,Supplying Centre,Supplying centre sample ID,Sex,                
                 try:
                     source = Source.objects.get(source_name=line['Supplying Centre'])
                 except Source.DoesNotExist:
-                    print u"Can't find source in database " + line['Supplying Centre']
+#                    messages.error(request, u"Can't find source in database '" + line['Supplying Centre'] + u"'")
+                    print u"Can't find source in database '" + line['Supplying Centre'] + u"'"
+                    continue                
+                
+                ## check if the id has already been entered for the given source
+                if IndividualIdentifier.objects.filter(individual_string=line['Supplying centre sample ID'],source_id=source.id).count() > 0:
+#                    messages.error(request, u"Individual '" + line['Supplying centre sample ID'] + u"' already in database")
+                    print u"Individual '" + line['Supplying centre sample ID'] + u"' already in database"                     
                     continue
                 
                 ind = Individual()
-                if self.is_number(line['Sex']):
+                if str.isdigit(line['Sex']):
                     ind.sex = line['Sex']
                 else:
                     if line['Sex'] == "Female":
@@ -59,7 +61,24 @@ class BulkUploadAdmin(admin.ModelAdmin):
                         ind.sex = 1
                     else:
                         ind.sex = 0
-                        
+
+#                warehouseCursor.execute("SELECT DISTINCT gender FROM samples WHERE supplier_name = %s ORDER BY checked_at desc", line['Supplying centre sample ID'])
+#                row = warehouseCursor.fetchone()
+#                if row[0] is None:
+#                    messages.error(request, u"Individual " + line['Supplying centre sample ID'] + u" NOT found in warehouse")
+#                    continue
+#                else:           
+#                    if row[2] == "Female":
+#                        if ind.sex == 0:
+#                            ind.sex = 2                        
+#                        elif ind.sex == 1:
+#                            messages.error(request, u"gender does not match warehouse for individual "  + line['Supplying centre sample ID'])
+#                    elif row[2] == "Male":
+#                        if ind.sex == 0:
+#                            ind.sex = 1                        
+#                        elif ind.sex == 2:
+#                            messages.error(request, u"gender does not match warehouse for individual "  + line['Supplying centre sample ID'])
+                            
                 ind.has_dup = False
                 ind.flagged = False
                 ind.date_created = datetime.datetime.utcnow().replace(tzinfo=utc)
@@ -76,15 +95,17 @@ class BulkUploadAdmin(admin.ModelAdmin):
                 try:
                     indId.save()
                 except IntegrityError:
-                    print u"Individual ID " + line['Supplying centre sample ID'] + " is already in the database"
+                    messages.error(request, u"Individual ID " + line['Supplying centre sample ID'] + " is already in the database")
                     continue
                                         
                 ## insert phenotype values
-                for col in line:                    
+                for col in line:     
+                    if line[col] is None:
+                        continue               
                     try:
                         pheno = Phenotype.objects.get(phenotype_name=col)
                     except Phenotype.DoesNotExist:
-                        ## print u"Warning Can't find phenotype '" + col + "' in database"
+#                        messages.error(request, u"Warning Can't find phenotype '" + col + "' in database")
                         continue
                     
                     if pheno.phenotype_type.phenotype_type == u"Affection Status":
@@ -104,48 +125,45 @@ class BulkUploadAdmin(admin.ModelAdmin):
                         try:
                             affectVal.save()
                         except:
-                            print u"failed to save " + pheno.phenotype_name + u" " + line[col]           
+                            messages.error(request, u"failed to save " + pheno.phenotype_name)           
                     elif pheno.phenotype_type.phenotype_type == u"Qualitative":
                         qualVal = QualitativePhenotypeValue()
                         qualVal.phenotype = pheno
                         qualVal.individual = ind
-                        if line[col] == '':
-                            continue
-                        else:
-                            qualVal.phenotype_value = line[col]
+                        qualVal.phenotype_value = line[col]
                         qualVal.flagged = False
                         qualVal.date_created = datetime.datetime.utcnow().replace(tzinfo=utc)
                         qualVal.last_updated = datetime.datetime.utcnow().replace(tzinfo=utc)
                         try:
                             qualVal.save()
                         except:
-                            print u"failed to save " + pheno.phenotype_name + u" " + line[col]
+                            messages.error(request, u"failed to save " + pheno.phenotype_name)
                     elif pheno.phenotype_type.phenotype_type == u"Quantitative":
                         quantVal = QuantitiatvePhenotypeValue()
                         quantVal.phenotype = pheno
                         quantVal.individual = ind
-                        if line[col] == '':
+                        if str.isdigit(line[col]) == False:
                             continue
-                        elif line[col] == None:
-                            continue
-                        else:
-                            quantVal.phenotype_value = Decimal(line[col])
+                        quantVal.phenotype_value = Decimal(line[col])                            
                         quantVal.flagged = False
                         quantVal.date_created = datetime.datetime.utcnow().replace(tzinfo=utc)
                         quantVal.last_updated = datetime.datetime.utcnow().replace(tzinfo=utc)
                         try:
                             quantVal.save()
                         except:
-                            print u"failed to save " + pheno.phenotype_name + u" " + line[col]
+                            messages.error(request, u"failed to save " + pheno.phenotype_name)
                     else:
-                        print u"unrecognised phenotype type " + pheno.phenotype_type.phenotype_type
+                        messages.error(request, u"unrecognised phenotype type " + pheno.phenotype_type.phenotype_type)
                         
+                    transaction.commit()
+            
             elif import_data_type == "Phenotypes":
                 ## required columns: Name,Type,Description
+                ## check if the required columns are in the file otherwise die explaining required format
                 try:
                     phenoType = PhenotypeType.objects.get(phenotype_type=line['Type'])
                 except PhenotypeType.DoesNotExist:
-                    print u"Phenotype Type " + line['Type'] + u" was NOT found in phenodb for " + line['Name']
+                    messages.error(request, u"Phenotype Type " + line['Type'] + u" was NOT found in phenodb for " + line['Name'])
                     continue
                          
                 pheno = Phenotype()
@@ -155,11 +173,13 @@ class BulkUploadAdmin(admin.ModelAdmin):
                 try:
                     pheno.save()
                 except IntegrityError:
-                    print u"Phenotype " + line['Name'] + " is already in the database"
+                    messages.error(request, u"Phenotype " + line['Name'] + " is already in the database")
                     continue
+                messages.success(request, u"Phenotype " + line['Name'] + u" was added to PhenoDB")
                 
             elif import_data_type == "Sources":
                 ## required columns: Name,Contact,Description
+                ## check if the required columns are in the file otherwise die explaining required format
                 source = Source()
                 source.source_name = line['Centre']
                 source.contact_name = line['Contact']
@@ -167,14 +187,16 @@ class BulkUploadAdmin(admin.ModelAdmin):
                 try:
                     source.save()
                 except IntegrityError:
-                    print u"Source " + line['Centre'] + " is already in the database"
+                    messages.error(request, u"Source " + line['Centre'] + " is already in the database")
+                    continue
+                messages.success(request, u"Source " + line['Centre'] + u" was added to PhenoDB")
                     
             elif import_data_type == "Samples":
                 ## required columns: Supplier_ID,Sample_ID
                 try:
                     sampleIndId = IndividualIdentifier.objects.get(individual_string=line['Supplying centre sample ID'])
                 except IndividualIdentifier.DoesNotExist:
-                    print u"Individual " + line['Supplying centre sample ID'] + u" NOT found in phenodb"
+#                    messages.error(request, u"Individual " + line['Supplying centre sample ID'] + u" NOT found in phenodb")
                     continue
                           
                 sample = Sample()
@@ -182,22 +204,38 @@ class BulkUploadAdmin(admin.ModelAdmin):
                 sample.sample_id = line['Sample ID']
                 sample.date_created = datetime.datetime.utcnow().replace(tzinfo=utc)
                 sample.last_updated = datetime.datetime.utcnow().replace(tzinfo=utc)
-                warehouseCursor = connections['warehouse'].cursor()
                 warehouseCursor.execute("SELECT DISTINCT sanger_sample_id, supplier_name, gender FROM samples WHERE name = %s ORDER BY checked_at desc", sample.sample_id)
                 row = warehouseCursor.fetchone()
+                if row is None:
+                    messages.error(request, u"Sample " + sample.sample_id + u" NOT found in warehouse")
+                    continue
                 if row[0] is None:
-                    print u"Sample " + sample.sample_id + u" NOT found in warehouse"
-                else:
-                    if row[1] == sampleIndId.individual_string:
-                        sample.save()                        
-                        if row[2] == sampleIndId.individual.sex:
-                            print u"gender " + sampleIndId.individual.sex.str() + u" matches warehouse "  + row[2]
-                        else:
-                            print u"gender " + str(sampleIndId.individual.sex) + u" does not match warehouse "  + row[2]
-                    else:
-                        print u"supplier name " + str(sampleIndId.individual_string) + u" does not match warehouse "  + row[1]
-                        
-        ## return an array of messages that get printed to the browser                    
+                    messages.error(request, u"Sample " + sample.sample_id + u" NOT found in warehouse")
+                    continue  
+                if row[1] != sampleIndId.individual_string:
+                    messages.error(request, u"supplier name " + str(sampleIndId.individual_string) + u" does not match warehouse "  + row[1])
+                    try:
+                        source = Source.objects.get(source_name=line['Supplying Centre'])
+                    except Source.DoesNotExist:
+                        continue
+                    ## insert the new individual identifier
+                    indId = IndividualIdentifier()
+                    indId.individual = sampleIndId.individual
+                    indId.individual_string = row[1]
+                    indId.source = source
+                    indId.date_created = datetime.datetime.utcnow().replace(tzinfo=utc)
+                    indId.last_updated = datetime.datetime.utcnow().replace(tzinfo=utc)
+                    try:
+                        indId.save()
+                    except IntegrityError:
+                        messages.error(request, u"Individual ID " + line['Supplying centre sample ID'] + " is already in the database")
+                        continue                                                               
+                try:
+                    sample.save()
+                except IntegrityError:
+#                   messages.error(request, u"Sample " + line['Sample ID'] + " is already in the database")
+                    continue
+                transaction.commit()
         return
                           
 admin.site.register(Platform)
@@ -207,6 +245,4 @@ admin.site.register(Phenotype)
 admin.site.register(Study)
 admin.site.register(Source)
 admin.site.register(QC)
-admin.site.register(Individual)
-admin.site.register(Sample)
 admin.site.register(BulkUpload, BulkUploadAdmin)

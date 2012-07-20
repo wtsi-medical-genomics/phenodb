@@ -80,7 +80,7 @@ class Study(models.Model):
 
 class Sample(models.Model):
     individual = models.ForeignKey(Individual)
-    sample_id = models.CharField(max_length=100, unique=True)
+    sample_id = models.CharField(max_length=100)
     date_created = models.DateTimeField()
     last_updated = models.DateTimeField()
     
@@ -100,13 +100,13 @@ class Source(models.Model):
 
 class IndividualIdentifier(models.Model):
     individual = models.ForeignKey(Individual)
-    individual_string = models.CharField(max_length=100, unique=True)
+    individual_string = models.CharField(max_length=100)
     source = models.ForeignKey(Source)
     date_created = models.DateTimeField()
     last_updated = models.DateTimeField()
     
     def __unicode__(self):
-        return self.individual_id
+        return self.individual_string
 
 class QC(models.Model):
     qc_name = models.CharField(max_length=100, unique=True)
