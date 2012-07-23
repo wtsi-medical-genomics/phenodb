@@ -41,14 +41,12 @@ class BulkUploadAdmin(admin.ModelAdmin):
                 try:
                     source = Source.objects.get(source_name=line['Supplying Centre'])
                 except Source.DoesNotExist:
-#                    messages.error(request, u"Can't find source in database '" + line['Supplying Centre'] + u"'")
-                    print u"Can't find source in database '" + line['Supplying Centre'] + u"'"
+                    messages.error(request, u"Can't find source in database '" + line['Supplying Centre'] + u"'")
                     continue                
                 
                 ## check if the id has already been entered for the given source
                 if IndividualIdentifier.objects.filter(individual_string=line['Supplying centre sample ID'],source_id=source.id).count() > 0:
-#                    messages.error(request, u"Individual '" + line['Supplying centre sample ID'] + u"' already in database")
-                    print u"Individual '" + line['Supplying centre sample ID'] + u"' already in database"                     
+                    messages.error(request, u"Individual '" + line['Supplying centre sample ID'] + u"' already added for this source")
                     continue
                 
                 ind = Individual()
