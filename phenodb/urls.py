@@ -6,6 +6,9 @@ admin.autodiscover()
 
 urlpatterns = patterns('search.views',
     url(r'^search/$', 'home'),
+    url(r'^search/idsearch/$', 'idSearch'),
+    url(r'^search/idsearch//$', 'idResults'),
+    url(r'^search/querybuilder/$', 'querybuilder'),
 #    url(r'^search/results/$', 'results'),
 #    url(r'^search/builder/$', 'builder'),
 #    url(r'^search/(?P<individualidentifier_id>\d+)/results/$', 'results'),
