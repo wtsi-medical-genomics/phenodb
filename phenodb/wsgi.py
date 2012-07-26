@@ -13,7 +13,9 @@ middleware here, or combine a Django application with an application of another
 framework.
 
 """
-import os
+import os, sys
+
+sys.path('/usr/local/lib/python2.6/dist-packages')
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "phenodb.settings")
 
