@@ -15,7 +15,7 @@ framework.
 """
 import os, sys
 
-sys.path('/usr/local/lib/python2.6/dist-packages')
+sys.path.append('/usr/local/lib/python2.6/dist-packages')
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "phenodb.settings")
 
