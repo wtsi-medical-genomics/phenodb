@@ -2,7 +2,8 @@ from django import forms
 from search.models import *
 from django.contrib import admin
 import datetime
-from django.utils.timezone import utc
+# django 1.4 only
+# from django.utils.timezone import utc
 import csv
 from django.db import connections
 from decimal import *
@@ -79,8 +80,11 @@ class BulkUploadAdmin(admin.ModelAdmin):
                             
                 ind.has_dup = False
                 ind.flagged = False
-                ind.date_created = datetime.datetime.utcnow().replace(tzinfo=utc)
-                ind.last_updated = datetime.datetime.utcnow().replace(tzinfo=utc)
+                ## django 1.4 only
+#                ind.date_created = datetime.datetime.utcnow().replace(tzinfo=utc)
+#                ind.last_updated = datetime.datetime.utcnow().replace(tzinfo=utc)
+                ind.date_created = datetime.datetime.now()
+                ind.last_updated = datetime.datetime.now()
                 ind.save()                    
                                 
                 ## insert the individual identifier
@@ -88,8 +92,11 @@ class BulkUploadAdmin(admin.ModelAdmin):
                 indId.individual = ind
                 indId.individual_string = line['Supplying centre sample ID']
                 indId.source = source
-                indId.date_created = datetime.datetime.utcnow().replace(tzinfo=utc)
-                indId.last_updated = datetime.datetime.utcnow().replace(tzinfo=utc)                
+                ## django 1.4 only
+#                indId.date_created = datetime.datetime.utcnow().replace(tzinfo=utc)
+#                indId.last_updated = datetime.datetime.utcnow().replace(tzinfo=utc)
+                indId.date_created = datetime.datetime.now()
+                indId.last_updated = datetime.datetime.now()                
                 try:
                     indId.save()
                 except IntegrityError:
@@ -118,8 +125,11 @@ class BulkUploadAdmin(admin.ModelAdmin):
                         else:
                             continue
                         affectVal.flagged = False
-                        affectVal.date_created = datetime.datetime.utcnow().replace(tzinfo=utc)
-                        affectVal.last_updated = datetime.datetime.utcnow().replace(tzinfo=utc)
+                        ## django 1.4 only
+#                        affectVal.date_created = datetime.datetime.utcnow().replace(tzinfo=utc)
+#                        affectVal.last_updated = datetime.datetime.utcnow().replace(tzinfo=utc)
+                        affectVal.date_created = datetime.datetime.now()
+                        affectVal.last_updated = datetime.datetime.now()
                         try:
                             affectVal.save()
                         except:
@@ -130,8 +140,11 @@ class BulkUploadAdmin(admin.ModelAdmin):
                         qualVal.individual = ind
                         qualVal.phenotype_value = line[col]
                         qualVal.flagged = False
-                        qualVal.date_created = datetime.datetime.utcnow().replace(tzinfo=utc)
-                        qualVal.last_updated = datetime.datetime.utcnow().replace(tzinfo=utc)
+                        ## django 1.4 only
+#                        qualVal.date_created = datetime.datetime.utcnow().replace(tzinfo=utc)
+#                        qualVal.last_updated = datetime.datetime.utcnow().replace(tzinfo=utc)
+                        qualVal.date_created = datetime.datetime.now()
+                        qualVal.last_updated = datetime.datetime.now()
                         try:
                             qualVal.save()
                         except:
@@ -144,8 +157,11 @@ class BulkUploadAdmin(admin.ModelAdmin):
                             continue
                         quantVal.phenotype_value = Decimal(line[col])                            
                         quantVal.flagged = False
-                        quantVal.date_created = datetime.datetime.utcnow().replace(tzinfo=utc)
-                        quantVal.last_updated = datetime.datetime.utcnow().replace(tzinfo=utc)
+                        ## django 1.4 only 
+#                        quantVal.date_created = datetime.datetime.utcnow().replace(tzinfo=utc)
+#                        quantVal.last_updated = datetime.datetime.utcnow().replace(tzinfo=utc)
+                        quantVal.date_created = datetime.datetime.now()
+                        quantVal.last_updated = datetime.datetime.now()
                         try:
                             quantVal.save()
                         except:
@@ -191,17 +207,28 @@ class BulkUploadAdmin(admin.ModelAdmin):
                     
             elif import_data_type == "Samples":
                 ## required columns: Supplier_ID,Sample_ID
+                
                 try:
-                    sampleIndId = IndividualIdentifier.objects.get(individual_string=line['Supplying centre sample ID'])
+                    source = Source.objects.get(source_name=line['Supplying Centre'])
+                except Source.DoesNotExist:
+                    messages.error(request, u"Can't find source in database '" + line['Supplying Centre'] + u"'")
+                    continue                
+                
+                ## check if the id has already been entered for the given source
+                try:
+                    sampleIndId = IndividualIdentifier.objects.get(individual_string=line['Supplying centre sample ID'],source_id=source.id)
                 except IndividualIdentifier.DoesNotExist:
-#                    messages.error(request, u"Individual " + line['Supplying centre sample ID'] + u" NOT found in phenodb")
+                    messages.error(request, u"Individual " + line['Supplying centre sample ID'] + u" NOT found in phenodb")
                     continue
                           
                 sample = Sample()
                 sample.individual = sampleIndId.individual
                 sample.sample_id = line['Sample ID']
-                sample.date_created = datetime.datetime.utcnow().replace(tzinfo=utc)
-                sample.last_updated = datetime.datetime.utcnow().replace(tzinfo=utc)
+                ## django 1.4 only
+#                sample.date_created = datetime.datetime.utcnow().replace(tzinfo=utc)
+#                sample.last_updated = datetime.datetime.utcnow().replace(tzinfo=utc)
+                sample.date_created = datetime.datetime.now()
+                sample.last_updated = datetime.datetime.now()
                 warehouseCursor.execute("SELECT DISTINCT sanger_sample_id, supplier_name, gender FROM samples WHERE name = %s ORDER BY checked_at desc", sample.sample_id)
                 row = warehouseCursor.fetchone()
                 if row is None:
@@ -221,8 +248,11 @@ class BulkUploadAdmin(admin.ModelAdmin):
                     indId.individual = sampleIndId.individual
                     indId.individual_string = row[1]
                     indId.source = source
-                    indId.date_created = datetime.datetime.utcnow().replace(tzinfo=utc)
-                    indId.last_updated = datetime.datetime.utcnow().replace(tzinfo=utc)
+                    ## django 1.4 only
+#                    indId.date_created = datetime.datetime.utcnow().replace(tzinfo=utc)
+#                    indId.last_updated = datetime.datetime.utcnow().replace(tzinfo=utc)
+                    indId.date_created = datetime.datetime.now()
+                    indId.last_updated = datetime.datetime.now()
                     try:
                         indId.save()
                     except IntegrityError:
