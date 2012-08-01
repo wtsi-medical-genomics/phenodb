@@ -114,10 +114,8 @@ ROOT_URLCONF = 'phenodb.urls'
 WSGI_APPLICATION = 'phenodb.wsgi.application'
 
 TEMPLATE_DIRS = (
-    "/Users/jm20/work/workspace/phenodb/templates"
-    # Put strings here, like "/home/html/django_templates" or "C:/www/django/templates".
-    # Always use forward slashes, even on Windows.
-    # Don't forget to use absolute paths, not relative paths.
+    "/nfs/users/nfs_j/jm20/phenodb/templates"
+#    "/Users/jm20/work/workspace/phenodb/templates"
 )
 
 INSTALLED_APPS = (
