@@ -1,0 +1,14 @@
+<table>
+    <tr>
+        <th>Phenotype name</th>
+        <th>Phenotype type</th>
+        <th>Phenotype description</th>
+    </tr>
+    {% for item in query_results %}
+    <tr> 
+        <td>{{ item.phenotype_name }}</td>
+        <td>{{ item.phenotype_type }}</td>
+        <td>{{ item.phenotype_description }}</td>
+    </tr>
+    {% endfor %}
+</table>
