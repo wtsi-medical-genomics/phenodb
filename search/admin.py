@@ -265,12 +265,27 @@ class BulkUploadAdmin(admin.ModelAdmin):
                     continue
                 transaction.commit()
         return
+
+class PlatformAdmin(admin.ModelAdmin):
+    list_display = ('platform_name', 'platform_type', 'platform_description')
+
+class PhenotypeAdmin(admin.ModelAdmin):
+    list_display = ('phenotype_name', 'phenotyp_type', 'phenotype_description')                     
+                     
+class StudyAdmin(admin.ModelAdmin):
+    list_display = ('study_name', 'platform', 'study_description', 'data_location', 'last_updated')
+    
+class SourceAdmin(admin.ModelAdmin):
+    list_display = ('source_name', 'contact_name', 'source_description')
+    
+class QCAdmin(admin.ModelAdmin):
+    list_display = ('qc_name', 'qc_description', 'last_updated')
                           
-admin.site.register(Platform)
+admin.site.register(Platform, PlatformAdmin)
 admin.site.register(PlatformType)
 admin.site.register(PhenotypeType)
-admin.site.register(Phenotype)
-admin.site.register(Study)
-admin.site.register(Source)
-admin.site.register(QC)
+admin.site.register(Phenotype, PhenotypeAdmin)
+admin.site.register(Study, StudyAdmin)
+admin.site.register(Source, SourceAdmin)
+admin.site.register(QC, QCAdmin)
 admin.site.register(BulkUpload, BulkUploadAdmin)
