@@ -270,7 +270,7 @@ class PlatformAdmin(admin.ModelAdmin):
     list_display = ('platform_name', 'platform_type', 'platform_description')
 
 class PhenotypeAdmin(admin.ModelAdmin):
-    list_display = ('phenotype_name', 'phenotyp_type', 'phenotype_description')                     
+    list_display = ('phenotype_name', 'phenotype_type', 'phenotype_description')                     
                      
 class StudyAdmin(admin.ModelAdmin):
     list_display = ('study_name', 'platform', 'study_description', 'data_location', 'last_updated')
