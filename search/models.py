@@ -120,6 +120,7 @@ class QC(models.Model):
 class SampleQC(models.Model):
     sample = models.ForeignKey(Sample)
     platform = models.ForeignKey(Platform)
+    study = models.ForeignKey(Study)
     qc = models.ForeignKey(QC)
     qc_pass = models.BooleanField()
     date_created = models.DateTimeField()
