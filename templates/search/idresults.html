@@ -1,14 +1,14 @@
 <table>
     <tr>
-        <th>Phenotype name</th>
-        <th>Phenotype type</th>
-        <th>Phenotype description</th>
+        <th>ID</th>
+        <th>Source</th>
+        <th>Sex</th>        
     </tr>
     {% for item in query_results %}
     <tr> 
-        <td>{{ item.phenotype_name }}</td>
-        <td>{{ item.phenotype_type }}</td>
-        <td>{{ item.phenotype_description }}</td>
+        <td>{{ item.individual_string }}</td>
+        <td>{{ item.source.source_name }}</td>
+        <td>{{ item.individual.sex }}</td>
     </tr>
     {% endfor %}
 </table>
