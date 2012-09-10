@@ -20,26 +20,21 @@ def idSearch(request):
     if request.method == 'POST':
         form = SearchForm(request.POST)
         if form.is_valid(): # All validation rules pass
-            query_id = form.cleaned_data['id_field'].strip()
-            indIds = IndividualIdentifier.objects.filter(individual_string=query_id)
-            if IndividualIdentifier.objects.filter(individual_string=query_id).count() > 0:  
-                               
+            query_id = form.cleaned_data['id_field'].strip()    
+            query_results = IndividualIdentifier.objects.filter(individual_string=query_id)
+            
+            if query_results.count() > 0:                  
                 ## if there is more than one match the  print each one for the user to select the correct one                
-                if IndividualIdentifier.objects.filter(individual_string=form.cleaned_data['id_field'].strip()).count() > 1:
-                    print "ID matches multiple individuals:"
-                    for indId in indIds:
-                        print indId.source.source_name
+                if query_results.count() > 1:
+                    url = reverse('idselect', kwargs={'query_results': query_results})
+                    return HttpResponseRedirect(url)
                 else:
                     indId = IndividualIdentifier.objects.get(individual_string=query_id)
-                
-                
-                url = reverse('idresults', kwargs={'indId': indId.individual.id})
-
-                HttpResponseRedirect(url)
-                
+                    url = reverse('idresults', kwargs={'indId': indId.individual.id})
+                    return HttpResponseRedirect(url)
             else:
                 ## id not found
-                HttpResponseRedirect()
+                HttpResponseRedirect('/search/idsearch')
     else:
         form = SearchForm() # An unbound form
         return render(request, 'search/idsearch.html', {'form': form,})
