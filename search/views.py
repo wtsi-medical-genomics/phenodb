@@ -34,7 +34,8 @@ def idSearch(request):
                     return HttpResponseRedirect(url)
             else:
                 ## id not found
-                HttpResponseRedirect('/search/idsearch')
+                form = SearchForm() # An unbound form
+                return render(request, 'search/idsearch.html', {'form': form,})
     else:
         form = SearchForm() # An unbound form
         return render(request, 'search/idsearch.html', {'form': form,})
