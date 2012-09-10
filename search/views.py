@@ -22,34 +22,19 @@ def idSearch(request):
         if form.is_valid(): # All validation rules pass
             query_id = form.cleaned_data['id_field'].strip()    
             query_results = IndividualIdentifier.objects.filter(individual_string=query_id)
-            
-            if query_results.count() > 0:
-                
-                ind_results = dict()
-                
+            if query_results.count() > 0:                
+                inds = []                
                 for ind in query_results:
-                    sample_results = Sample.objects.filter(individual=ind)
-                    ind_results['sample_results'] = sample_results
-                    affection_results = AffectionStatusPhenotypeValue.objects.filter(individual=ind)
-                    ind_results['affection_results'] = affection_results 
-                    qualitative_results = QualitativePhenotypeValue.objects.filter(individual=ind)
-                    ind_results['qualitative_results'] = qualitative_results 
+                    sample_results = Sample.objects.filter(individual=ind)                    
+                    affection_results = AffectionStatusPhenotypeValue.objects.filter(individual=ind)                     
+                    qualitative_results = QualitativePhenotypeValue.objects.filter(individual=ind)                    
                     quantitiative_results = QuantitiatvePhenotypeValue.objects.filter(individual=ind)
-                    ind_results['quantitiative_results'] = quantitiative_results  
-                    
-                    
-                    
-                ## for each ind that is found:
-                ## get all samples
-                ## get all phenotypes
-                
-                
-                
-                return render_to_response('search/iddetails.html', {'query_results': ind_results})
-#                url = reverse('idresults', kwargs={'indId': indId.individual.id})                
-#                return HttpResponseRedirect(url)
+                    ind_results = {'ind':ind,'samples':sample_results,'aff':affection_results,'qual':qualitative_results,'quant':quantitiative_results}
+                    inds.append(ind_results)
+                return render_to_response('search/idresults.html', {'query_results': inds})
 #            else:
-                ## id not found
+#            id not found
+
     else:
         form = SearchForm() # An unbound form
         return render(request, 'search/idsearch.html', {'form': form,})
