@@ -24,9 +24,9 @@ def idSearch(request):
             query_results = IndividualIdentifier.objects.filter(individual_string=query_id)
             
             if query_results.count() > 0:                  
-                indId = IndividualIdentifier.objects.get(individual_string=query_id)
-                url = reverse('idresults', kwargs={'indId': indId.individual.id})
-                return HttpResponseRedirect(url)
+                return render_to_response('search/idresults.html', {'query_results': query_results})
+#                url = reverse('idresults', kwargs={'indId': indId.individual.id})                
+#                return HttpResponseRedirect(url)
             ##else:
                 ## id not found
     else:
