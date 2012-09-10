@@ -4,11 +4,11 @@
         <th>Source</th>
         <th>Sex</th>        
     </tr>
-    {% for item in query_results %}
+    {% for ind in query_results %}
     <tr> 
-        <td>{{ item.individual_string }}</td>
-        <td>{{ item.source.source_name }}</td>
-        <td>{{ item.individual.sex }}</td>
+        <td>{{ ind['ind'].individual_string }}</td>
+        <td>{{ ind['ind'].source.source_name }}</td>
+        <td>{{ ind['ind'].individual.sex }}</td>
     </tr>
     {% endfor %}
 </table>
