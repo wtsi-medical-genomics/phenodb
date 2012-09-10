@@ -24,18 +24,11 @@ def idSearch(request):
             query_results = IndividualIdentifier.objects.filter(individual_string=query_id)
             
             if query_results.count() > 0:                  
-                ## if there is more than one match the  print each one for the user to select the correct one                
-                if query_results.count() > 1:
-                    url = reverse('idselect', kwargs={'query_results': query_results})
-                    return HttpResponseRedirect(url)
-                else:
-                    indId = IndividualIdentifier.objects.get(individual_string=query_id)
-                    url = reverse('idresults', kwargs={'indId': indId.individual.id})
-                    return HttpResponseRedirect(url)
-            else:
+                indId = IndividualIdentifier.objects.get(individual_string=query_id)
+                url = reverse('idresults', kwargs={'indId': indId.individual.id})
+                return HttpResponseRedirect(url)
+            ##else:
                 ## id not found
-                form = SearchForm() # An unbound form
-                return render(request, 'search/idsearch.html', {'form': form,})
     else:
         form = SearchForm() # An unbound form
         return render(request, 'search/idsearch.html', {'form': form,})
