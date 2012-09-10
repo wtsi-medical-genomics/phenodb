@@ -4,11 +4,11 @@
         <th>Source</th>
         <th>Sex</th>        
     </tr>
-    {% for ind in query_results %}
-    <tr> 
+    {% for ind in query_results %}    
     	{% for key,value in ind.items %}
-        	<td>{{ key }}</td>        	
-    	{% endfor %}    
-    </tr>
+    		<tr> 
+        		<td>{{ key }}</td>        	
+    		</tr>
+    	{% endfor %}        
     {% endfor %}
 </table>
