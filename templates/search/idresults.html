@@ -9,12 +9,7 @@
     <tr> 
         <td>{{ ind.ind.individual_string }}</td>
         <td>{{ ind.ind.source.source_name }}</td>
-        <td>{{ ind.ind.individual.sex }}</td>
-        <td>{{ ind.samples }}</td>
-        <td>{{ ind.aff }}</td>
-        <td>{{ ind.qual }}</td>
-        <td>{{ ind.quant }}</td>
-        
+        <td>{{ ind.ind.individual.sex }}</td>        
                 
         {% for sample in ind.samples %}
     		<td>{{ sample.sample_id }}</td>    	
