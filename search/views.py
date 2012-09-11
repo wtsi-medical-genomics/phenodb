@@ -7,7 +7,7 @@ from django.core.urlresolvers import reverse
 from django import forms
 
 class SearchForm(forms.Form):
-    id_textarea = forms.widgets.Textarea(attrs={'rows':4, 'cols':60})
+    id_textarea = forms.CharField(widget=forms.Textarea)
 
 def home(request):
     return render(request, 'search/home.html', {})
