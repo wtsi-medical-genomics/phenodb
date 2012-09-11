@@ -22,14 +22,13 @@ def idSearch(request):
         if form.is_valid(): # All validation rules pass
             
             textarea_values = form.cleaned_data['id_textarea'].splitlines()
-                        
+            
             ## for each id
+            inds = []
             for line in textarea_values:
                 query_id = line.strip()
-                query_results = IndividualIdentifier.objects.filter(individual_string=query_id)
-                
-                if query_results.count() > 0:                
-                    inds = []                
+                query_results = IndividualIdentifier.objects.filter(individual_string=query_id)                
+                if query_results.count() > 0:                                                
                     for ind in query_results:
                         sample_results = Sample.objects.filter(individual=ind)                    
                         affection_results = AffectionStatusPhenotypeValue.objects.filter(individual=ind)                     
