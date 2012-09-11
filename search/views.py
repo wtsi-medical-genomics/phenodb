@@ -21,9 +21,8 @@ def idSearch(request):
         form = SearchForm(request.POST)
         if form.is_valid(): # All validation rules pass
             
-            ##Êcheck which form field has been used
             textarea_values = form.cleaned_data['id_textarea'].splitlines()
-            
+                        
             ## for each id
             for line in textarea_values:
                 query_id = line.strip()
