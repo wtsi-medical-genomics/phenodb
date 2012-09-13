@@ -1,32 +1,6 @@
-<table>
-    <tr>
-        <th>ID</th>
-        <th>Source</th>
-        <th>Sex</th>  
-        <th>Samples</th>      
-    </tr>
-    {% for ind in query_results %}
-    <tr> 
-        <td>{{ ind.ind.individual_string }}</td>
-        <td>{{ ind.ind.source.source_name }}</td>
-        <td>{{ ind.ind.individual.sex }}</td>        
-                
-        {% for sample in ind.samples %}
-    		<td>{{ sample.sample_id }}</td>    	
-    	{% endfor %}    
-    	
-    	{% for aff in ind.aff %}
-    		<td>{{ aff.phenotype.phenotype_name }}</td>    	
-    	{% endfor %}
-    	
-    	{% for qual in ind.qual %}
-    		<td>{{ qual.phenotype.phenotype_name }}</td>    	
-    	{% endfor %}
-    	
-    	{% for quant in ind.quant %}
-    		<td>{{ quant.phenotype.phenotype_name }}</td>    	
-    	{% endfor %}
-    	        
-    </tr>
-    {% endfor %}
-</table>
+{% extends "search/base.html" %}
+
+{% block content %}
+  {% load render_table from django_tables2 %}
+  {% render_table table %}
+{% endblock %}

@@ -1,14 +1,6 @@
-<table>
-    <tr>
-        <th>Phenotype name</th>
-        <th>Phenotype type</th>
-        <th>Phenotype description</th>
-    </tr>
-    {% for item in query_results %}
-    <tr> 
-        <td>{{ item.phenotype_name }}</td>
-        <td>{{ item.phenotype_type }}</td>
-        <td>{{ item.phenotype_description }}</td>
-    </tr>
-    {% endfor %}
-</table>
+{% extends "search/base.html" %}
+
+{% block content %}
+  {% load render_table from django_tables2 %}
+  {% render_table table %}
+{% endblock %}
