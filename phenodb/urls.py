@@ -1,5 +1,5 @@
 from django.conf.urls.defaults import patterns, include, url
-
+from django.contrib.staticfiles.urls import staticfiles_urlpatterns
 from django.contrib import admin
 
 admin.autodiscover()
@@ -7,7 +7,6 @@ admin.autodiscover()
 urlpatterns = patterns('search.views',
     url(r'^search/$', 'home'),
     url(r'^search/idsearch/$', 'idSearch'),
-    url(r'^search/idsearch//$', 'idResults'),
     url(r'^search/querybuilder/$', 'querybuilder'),
     url(r'^search/phenotypes/$', 'showPhenotypes'),
 #    url(r'^search/results/$', 'results'),
@@ -17,3 +16,4 @@ urlpatterns = patterns('search.views',
     url(r'^admin/', include(admin.site.urls)),
 )
 
+urlpatterns += staticfiles_urlpatterns()
