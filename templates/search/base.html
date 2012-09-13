@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}css/bootstrap.css" />
+  <title>{% block title %}PhenoDB{% endblock %}</title>
+</head>
+
+<body>
+  <div class="navbar">
+    <div class="navbar-inner">
+      <a class="brand" href="/search">PhenoDB</a>
+    </div>
+  </div>
+  <div class="container-fluid">
+    <div class="row-fluid">
+      <div class="span2">
+        <div id="sidebar">
+          <ul class="nav nav-list">
+            <li class="nav-header">Menu</li>
+            <li><a href="/search">Home</a></li>
+            <li><a href="/search/idsearch">Search Individuals</a></li>
+            <li><a href="/search/querybuilder">Query Builder</a></li>
+            <li><a href="/search/phenotypes">Phenotypes</a></li>
+          </ul> 
+        </div>
+      </div>
+      <div class="span10">
+        <div id="content">
+          {% block content %}{% endblock %}
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
