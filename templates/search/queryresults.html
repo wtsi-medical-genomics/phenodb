@@ -1,0 +1,7 @@
+{% extends "search/base.html" %}
+
+{% block content %}
+  {% load render_table from django_tables2 %}
+  {% render_table table %}
+  <a href="/search/querybuilder/export"><i class="icon-file"></i><em>export to .csv</em></a>    
+{% endblock %}

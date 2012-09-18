@@ -1,0 +1,39 @@
+{% extends "search/base.html" %}    
+
+{% block content %}
+  <p class="lead">Build a query.</p>  
+  {% if message %}
+    <p class="text-error"><em>{{message}}</em></p>
+  {% endif %}
+  <form class="form-inline" action="" method="post">
+    {% csrf_token %}
+    <label>Select</label>
+    <select name="select">
+      <option value="individuals">Individual IDs</option>
+      <option value="samples">Sample IDs</option>
+      <option value="count">Count</option>      
+    </select>
+    <label>From</label>
+    <select name="from">
+      <option value="phenotype">Phenotype</option>            
+    </select>
+    <label>Where</label>
+    <select name="where">
+      {% for phenotype in phenotypes %}
+      	<option value="{{ phenotype.id }}">{{ phenotype.phenotype_name }}</option>
+      {% endfor %}	                  
+    </select>
+    <select name="is">
+      <option value="eq">Equals</option>
+      <option value="contains">Contains</option>
+      <option value="startswith">Starts with</option>
+      <option value="endswith">Ends with</option>
+      <option value="gt">></option>
+      <option value="lt"><</option>
+      <option value="gte">>=</option>
+      <option value="lte"><=</option>                  
+    </select>
+    <input type="text" name="querystr" />
+    <input type="submit" value="Search" class="btn btn-large btn-primary"/>
+  </form>
+{% endblock %}
