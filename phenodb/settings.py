@@ -129,6 +129,7 @@ INSTALLED_APPS = (
     # Uncomment the next line to enable admin documentation:
     # 'django.contrib.admindocs',
     'search'
+    'django_tables2'
 )
 
 # A sample logging configuration. The only tangible logging
