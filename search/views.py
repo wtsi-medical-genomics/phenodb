@@ -6,6 +6,8 @@ import django_tables2 as tables
 from django_tables2 import RequestConfig
 import csv
 from django.http import HttpResponse
+from time import time
+from django.core import serializers
 
 class SearchForm(forms.Form):
     id_textarea = forms.CharField(widget=forms.Textarea)
@@ -57,19 +59,36 @@ def home(request):
 
 def showPhenotypes(request):
     table = PhenotypeTable(Phenotype.objects.all())
-    return render_to_response('search/dataview.html', {'table': table}, context_instance=RequestContext(request))
+#    RequestConfig(request, paginate={"per_page": 50}).configure(table)
+    return render(request, 'search/dataview.html', {'table': table})
 
 def showPlatforms(request):
     table = PlatformTable(Platform.objects.all())
-    return render_to_response('search/dataview.html', {'table': table}, context_instance=RequestContext(request))
+#    RequestConfig(request, paginate={"per_page": 50}).configure(table)
+    return render(request, 'search/dataview.html', {'table': table})
 
 def showStudies(request):
     table = StudyTable(Study.objects.all())
-    return render_to_response('search/dataview.html', {'table': table}, context_instance=RequestContext(request))
+#    RequestConfig(request, paginate={"per_page": 50}).configure(table)
+    return render(request, 'search/dataview.html', {'table': table})
 
 def showQCs(request):
     table = QCTable(QC.objects.all())
-    return render_to_response('search/dataview.html', {'table': table}, context_instance=RequestContext(request))
+#    RequestConfig(request, paginate={"per_page": 50}).configure(table)
+    return render(request, 'search/dataview.html', {'table': table})
+
+def all_json_models(request, menuid):
+    print menuid
+    if menuid == 'phenotype':
+        menuitems = Phenotype.objects.all()
+    elif menuid == 'platform':
+        menuitems = Platform.objects.all()
+    elif menuid == 'study':
+        menuitems = Study.objects.all()
+    elif menuid == 'qc':
+        menuitems = QC.objects.all()
+    json_models = serializers.serialize("json", menuitems)
+    return HttpResponse(json_models, mimetype="application/javascript")
 
 def idSearch(request):
     if request.method == 'POST':
@@ -129,7 +148,7 @@ def idSearch(request):
                         
                         inds.append(ind_results)
             table = IndividualTable(inds)
-            return render_to_response('search/idresults.html', {'table': table}, context_instance=RequestContext(request))
+            return render(request, 'search/idresults.html', {'table': table})
 #            else:
 #            id not found
 
@@ -140,62 +159,139 @@ def idSearch(request):
 def querybuilder(request):
     if request.method == 'POST':
         print request.POST
-        
+        start_time = time()
         ## becuase we are not using a django form we need to check the form data is valid ourselves 
         select = request.POST['select']            
-        table = request.POST['from']
-        where = request.POST['where']
-        where_is = request.POST['is']
-        querystr = request.POST['querystr'].strip()
+        tables = request.POST.getlist('from')
+        wheres = request.POST.getlist('where')
+        where_iss = request.POST.getlist('is')
+        querystrs = request.POST.getlist('querystr')        
+                
+        ## perform the first query:        
+        table = tables.pop()        
+        where = wheres.pop()
+        where_is = where_iss.pop()
+        querystr = querystrs.pop().strip()
+        query_results, query_lookup = query_db(select, table, where, where_is, querystr)
         
-        ## go through a loop of all the queries the user has created
-        ## for every query after the first use the list of query results to perform the next query        
-            
-        if table == 'phenotype':
-            ## get the phenotype object
-            phenotype = Phenotype.objects.get(id=where)            
-            if phenotype.phenotype_type.phenotype_type == 'Affection Status':
-                if where_is == 'eq':
-                    result_set = AffectionStatusPhenotypeValue.objects.filter(phenotype__exact=phenotype.id, phenotype_value__exact=querystr)
-                else:
-                    print "ERROR: not a valid comparison for an affection status field"
-                        
-            elif phenotype.phenotype_type.phenotype_type == 'Qualitative':
-                if where_is == 'eq':
-                    result_set = QualitativePhenotypeValue.objects.filter(phenotype__exact=phenotype.id, phenotype_value__iexact=querystr)
-                elif where_is == 'contains':
-                    result_set = QualitativePhenotypeValue.objects.filter(phenotype__exact=phenotype.id, phenotype_value__icontains=querystr)
-                elif where_is == 'starts_with':
-                    result_set = QualitativePhenotypeValue.objects.filter(phenotype__exact=phenotype.id, phenotype_value__istartswith=querystr)
-                elif where_is == 'ends_with':
-                    result_set = QualitativePhenotypeValue.objects.filter(phenotype__exact=phenotype.id, phenotype_value__iendswith=querystr)
-                else:
-                    print "ERROR: not a valid comparison for an Qualitative field"
-                                                            
-            elif phenotype.phenotype_type.phenotype_type == 'Quantitative':
-                if where_is == 'eq':
-                    result_set = QuantitiatvePhenotypeValue.objects.filter(phenotype__exact=phenotype.id, phenotype_value__iexact=querystr)
-                elif where_is == 'gt':
-                    result_set = QuantitiatvePhenotypeValue.objects.filter(phenotype__exact=phenotype.id, phenotype_value__gt=querystr)
-                elif where_is == 'gte':
-                    result_set = QuantitiatvePhenotypeValue.objects.filter(phenotype__exact=phenotype.id, phenotype_value__gte=querystr)
-                elif where_is == 'lt':
-                    result_set = QuantitiatvePhenotypeValue.objects.filter(phenotype__exact=phenotype.id, phenotype_value__lt=querystr)
-                elif where_is == 'lte':
-                    result_set = QuantitiatvePhenotypeValue.objects.filter(phenotype__exact=phenotype.id, phenotype_value__lte=querystr)
-                else:
-                    print "ERROR: not a valid comparison for an Quantitiatve field"
-            
-        if result_set.count() > 0:
-            ## save all the results in a dict matching the table class
-            query_results = []
-            for result in result_set:
-                query_results.append({'identifier':result.individual.id,'value':result.phenotype_value})         
-                table = QueryTable(query_results)
-            return render_to_response('search/queryresults.html', {'table': table, 'count': result_set.count()}, context_instance=RequestContext(request))
+        ## if there are more queries then perform them on the ids returned from the first query
+        while len(tables) > 0:
+            table = tables.pop()
+            where = wheres.pop()
+            where_is = where_iss.pop()
+            querystr = querystrs.pop().strip()
+            query_results, query_lookup = query_db_with_ids(select, table, where, where_is, querystr, query_lookup)        
+        
+        ## no more queries so return the data if there is any
+        if len(query_results) > 0:
+            table = QueryTable(query_results)
+#            RequestConfig(request, paginate={"per_page": 50}).configure(table)
+            query_time = time() - start_time
+            return render(request, 'search/queryresults.html', {'table': table, 'count':len(query_results),'querytime':query_time})
         else:
-            # return to the form with a message that no results were found
-            return render_to_response('search/querybuilder.html', {'phenotypes':Phenotype.objects.all(),'message':"Sorry your query didn't return any results, please try another query."}, context_instance=RequestContext(request))
+            message = "Sorry your query didn't return any results, please try another query."
+            return render(request, 'search/querybuilder.html', {'phenotypes':Phenotype.objects.all(),'message':message})  
+            
     else:
         # pass all the phenotypes/platforms/studies etc to the form                 
         return render(request, 'search/querybuilder.html', {'phenotypes':Phenotype.objects.all()})
+    
+def query_db (select, table, where, where_is, querystr):
+    
+    query_results_table = []
+    query_results_lookup = {}
+    
+    if table == 'phenotype':
+        ## get the phenotype object
+        phenotype = Phenotype.objects.get(id=where)            
+        if phenotype.phenotype_type.phenotype_type == 'Affection Status':
+            if where_is == 'eq':
+                result_set = AffectionStatusPhenotypeValue.objects.filter(phenotype__exact=phenotype.id, phenotype_value__exact=querystr)
+            else:
+                print "ERROR: not a valid comparison for an affection status field"
+                        
+        elif phenotype.phenotype_type.phenotype_type == 'Qualitative':
+            if where_is == 'eq':
+                result_set = QualitativePhenotypeValue.objects.filter(phenotype__exact=phenotype.id, phenotype_value__iexact=querystr)
+            elif where_is == 'contains':
+                result_set = QualitativePhenotypeValue.objects.filter(phenotype__exact=phenotype.id, phenotype_value__icontains=querystr)
+            elif where_is == 'starts_with':
+                result_set = QualitativePhenotypeValue.objects.filter(phenotype__exact=phenotype.id, phenotype_value__istartswith=querystr)
+            elif where_is == 'ends_with':
+                result_set = QualitativePhenotypeValue.objects.filter(phenotype__exact=phenotype.id, phenotype_value__iendswith=querystr)
+            else:
+                print "ERROR: not a valid comparison for an Qualitative field"
+                                                            
+        elif phenotype.phenotype_type.phenotype_type == 'Quantitative':
+            if where_is == 'eq':
+                result_set = QuantitiatvePhenotypeValue.objects.filter(phenotype__exact=phenotype.id, phenotype_value__iexact=querystr)
+            elif where_is == 'gt':
+                result_set = QuantitiatvePhenotypeValue.objects.filter(phenotype__exact=phenotype.id, phenotype_value__gt=querystr)
+            elif where_is == 'gte':
+                result_set = QuantitiatvePhenotypeValue.objects.filter(phenotype__exact=phenotype.id, phenotype_value__gte=querystr)
+            elif where_is == 'lt':
+                result_set = QuantitiatvePhenotypeValue.objects.filter(phenotype__exact=phenotype.id, phenotype_value__lt=querystr)
+            elif where_is == 'lte':
+                result_set = QuantitiatvePhenotypeValue.objects.filter(phenotype__exact=phenotype.id, phenotype_value__lte=querystr)
+            else:
+                print "ERROR: not a valid comparison for an Quantitiatve field"
+          
+        print "query done"
+                        
+        if result_set.count() > 0:            
+            ## save all the results in a dict matching the results table class
+            for result in result_set:
+                query_results_table.append({'identifier':result.individual.id,'value':result.phenotype_value}) 
+                query_results_lookup[result.individual.id] = result.phenotype_value
+        
+        print "processing done"
+                
+    return query_results_table, query_results_lookup
+
+def query_db_with_ids(select, table, where, where_is, querystr, query_lookup):
+    
+    new_query_results = []
+    query_results_lookup = {}
+    
+    if table == 'phenotype':
+        ## get the phenotype object
+        phenotype = Phenotype.objects.get(id=where)            
+        if phenotype.phenotype_type.phenotype_type == 'Affection Status':
+            if where_is == 'eq':
+                new_result_set = AffectionStatusPhenotypeValue.objects.filter(phenotype__exact=phenotype.id, phenotype_value__exact=querystr)
+            else:
+                print "ERROR: not a valid comparison for an affection status field"
+                        
+        elif phenotype.phenotype_type.phenotype_type == 'Qualitative':
+            if where_is == 'eq':
+                new_result_set = QualitativePhenotypeValue.objects.filter(phenotype__exact=phenotype.id, phenotype_value__iexact=querystr)
+            elif where_is == 'contains':
+                new_result_set = QualitativePhenotypeValue.objects.filter(phenotype__exact=phenotype.id, phenotype_value__icontains=querystr)
+            elif where_is == 'starts_with':
+                new_result_set = QualitativePhenotypeValue.objects.filter(phenotype__exact=phenotype.id, phenotype_value__istartswith=querystr)
+            elif where_is == 'ends_with':
+                new_result_set = QualitativePhenotypeValue.objects.filter(phenotype__exact=phenotype.id, phenotype_value__iendswith=querystr)
+            else:
+                print "ERROR: not a valid comparison for an Qualitative field"
+                                                            
+        elif phenotype.phenotype_type.phenotype_type == 'Quantitative':
+            if where_is == 'eq':
+                new_result_set = QuantitiatvePhenotypeValue.objects.filter(phenotype__exact=phenotype.id, phenotype_value__iexact=querystr)
+            elif where_is == 'gt':
+                new_result_set = QuantitiatvePhenotypeValue.objects.filter(phenotype__exact=phenotype.id, phenotype_value__gt=querystr)
+            elif where_is == 'gte':
+                new_result_set = QuantitiatvePhenotypeValue.objects.filter(phenotype__exact=phenotype.id, phenotype_value__gte=querystr)
+            elif where_is == 'lt':
+                new_result_set = QuantitiatvePhenotypeValue.objects.filter(phenotype__exact=phenotype.id, phenotype_value__lt=querystr)
+            elif where_is == 'lte':
+                new_result_set = QuantitiatvePhenotypeValue.objects.filter(phenotype__exact=phenotype.id, phenotype_value__lte=querystr)
+            else:
+                print "ERROR: not a valid comparison for an Quantitiatve field"        
+        
+        if new_result_set.count() > 0:
+            for result in new_result_set:
+                if result.individual.id in query_lookup:
+                    new_query_results.append({'identifier':result.individual.id,'value':[result.phenotype_value,query_lookup[result.individual.id]]})
+                    query_results_lookup[result.individual.id] = [result.phenotype_value,query_lookup[result.individual.id]]
+
+    return new_query_results, query_results_lookup
