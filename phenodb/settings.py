@@ -67,7 +67,7 @@ MEDIA_URL = ''
 # Don't put anything in this directory yourself; store your static files
 # in apps' "static/" subdirectories and in STATICFILES_DIRS.
 # Example: "/home/media/media.lawrence.com/static/"
-STATIC_ROOT = '/Users/jm20/static'
+STATIC_ROOT = '/nfs/users/nfs_j/jm20/static/'
 
 # URL prefix for static files.
 # Example: "http://media.lawrence.com/static/"
@@ -78,7 +78,6 @@ STATICFILES_DIRS = (
     # Put strings here, like "/home/html/static" or "C:/www/django/static".
     # Always use forward slashes, even on Windows.
     # Don't forget to use absolute paths, not relative paths.
-    "/Users/jm20/work/workspace/phenodb/static",
 )
 
 # List of finder classes that know how to find static files in
@@ -96,7 +95,7 @@ SECRET_KEY = '!1vxcpmb-ce-hl+adl+9@2xrpmfvl)bnfz#!#%aiodd^iry%dz'
 TEMPLATE_LOADERS = (
     'django.template.loaders.filesystem.Loader',
     'django.template.loaders.app_directories.Loader',
-#    'django.template.loaders.eggs.Loader',
+#     'django.template.loaders.eggs.Loader',
 )
 
 MIDDLEWARE_CLASSES = (
@@ -115,7 +114,8 @@ ROOT_URLCONF = 'phenodb.urls'
 WSGI_APPLICATION = 'phenodb.wsgi.application'
 
 TEMPLATE_DIRS = (
-    "/Users/jm20/work/workspace/phenodb/templates"
+    "/nfs/users/nfs_j/jm20/phenodb/templates"
+#    "/Users/jm20/work/workspace/phenodb/templates"
 )
 
 INSTALLED_APPS = (
@@ -128,9 +128,7 @@ INSTALLED_APPS = (
     'django.contrib.admin',
     # Uncomment the next line to enable admin documentation:
     # 'django.contrib.admindocs',
-    'search',
-    'django_tables2'
-    
+    'search'
 )
 
 # A sample logging configuration. The only tangible logging
