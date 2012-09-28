@@ -78,7 +78,6 @@ def showQCs(request):
     return render(request, 'search/dataview.html', {'table': table})
 
 def all_json_models(request, menuid):
-    print menuid
     if menuid == 'phenotype':
         menuitems = Phenotype.objects.all()
     elif menuid == 'platform':
