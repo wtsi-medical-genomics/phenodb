@@ -14,6 +14,9 @@ framework.
 
 """
 import os
+import sys  
+
+sys.path.append('/nfs/users/nfs_j/jm20/python_modules/lib/python2.6/site-packages')
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "phenodb.settings")
 
