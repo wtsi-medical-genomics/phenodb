@@ -2,10 +2,6 @@ from django.template import RequestContext
 from django.shortcuts import render, render_to_response
 from search.models import IndividualIdentifier, Phenotype, AffectionStatusPhenotypeValue, QualitativePhenotypeValue, QuantitiatvePhenotypeValue, Sample, Platform, Study, QC
 from django import forms
-
-import sys
-sys.path.append('/nfs/users/nfs_j/jm20/python_modules/lib/python2.6/site-packages')
-
 import django_tables2 as tables
 from django_tables2 import RequestConfig
 import csv
