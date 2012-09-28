@@ -14,19 +14,8 @@ framework.
 
 """
 import os
-import sys  
-
-sys.path.append('/nfs/users/nfs_j/jm20/python_modules/lib/python2.6/site-packages')
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "phenodb.settings")
 
-# This application object is used by any WSGI server configured to use this
-# file. This includes Django's development server, if the WSGI_APPLICATION
-# setting points here.
-
 from django.core.wsgi import get_wsgi_application
 application = get_wsgi_application()
-
-# Apply WSGI middleware here.
-# from helloworld.wsgi import HelloWorldApplication
-# application = HelloWorldApplication(application)
