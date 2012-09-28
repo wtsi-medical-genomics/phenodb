@@ -157,7 +157,6 @@ def idSearch(request):
 
 def querybuilder(request):
     if request.method == 'POST':
-        print request.POST
         start_time = time()
         ## becuase we are not using a django form we need to check the form data is valid ourselves 
         select = request.POST['select']            
