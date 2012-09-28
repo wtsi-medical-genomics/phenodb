@@ -233,16 +233,12 @@ def query_db (select, table, where, where_is, querystr):
                 result_set = QuantitiatvePhenotypeValue.objects.filter(phenotype__exact=phenotype.id, phenotype_value__lte=querystr)
             else:
                 print "ERROR: not a valid comparison for an Quantitiatve field"
-          
-        print "query done"
                         
         if result_set.count() > 0:            
             ## save all the results in a dict matching the results table class
             for result in result_set:
                 query_results_table.append({'identifier':result.individual.id,'value':result.phenotype_value}) 
                 query_results_lookup[result.individual.id] = result.phenotype_value
-        
-        print "processing done"
                 
     return query_results_table, query_results_lookup
 
