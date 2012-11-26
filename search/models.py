@@ -50,6 +50,7 @@ class AffectionStatusPhenotypeValue(models.Model):
     flagged = models.BooleanField() 
     date_created = models.DateTimeField()
     last_updated = models.DateTimeField()
+    ## phenotype.db_index = True
     
 class QualitativePhenotypeValue(models.Model):
     phenotype = models.ForeignKey(Phenotype)
