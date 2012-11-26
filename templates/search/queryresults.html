@@ -5,5 +5,38 @@
   <p class="lead">Query Time: {{querytime}} s.</p>
   {% load render_table from django_tables2 %}
   {% render_table table %}
-  <a href="/search/querybuilder/export"><i class="icon-file"></i><em>export to .csv</em></a>    
+
+<div class="pagination pagination-centered">
+  <ul>
+    {% if page_results.has_previous %}
+      <li><a href="?page={{ page_results.previous_page_number }}">previous</a></li>
+    {% else %}
+      <li class="active"><a href="?page={{ page_results.previous_page_number }}">previous</a></li>
+    {% endif %}
+    <li class="active"><a href="#">{{ page_results.number }}</a></li>
+    {% if page_results.has_next %}
+      <li><a href={% url search-querypage page_results.next_page_number select tables_str where_str whereis_str querystr_str %}>next</a></li>
+    {% else %}
+      <li class="active"><a href="/search/querybuilder/?page={{ page_results.next_page_number }}">next</a></li>
+    {% endif %}
+  </ul>  
+</div>
+
+<!--
+<div>
+  <select name="results_per_page">
+    <option value="message">Select Results Per Page</option>
+    <option value="25">25</option>
+    <option value="50">50</option>
+    <option value="100">100</option>
+    <option value="250">250</option>            
+  </select>
+</div>
+-->
+
+<div>
+  <a href="/search/querybuilder/export"><i class="icon-file"></i><em>export to .csv</em></a>
+</div>
+
+
 {% endblock %}
