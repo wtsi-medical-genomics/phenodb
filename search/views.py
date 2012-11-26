@@ -8,6 +8,7 @@ import csv
 from django.http import HttpResponse
 from time import time
 from django.core import serializers
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 
 class SearchForm(forms.Form):
     id_textarea = forms.CharField(widget=forms.Textarea)
@@ -165,6 +166,11 @@ def querybuilder(request):
         where_iss = request.POST.getlist('is')
         querystrs = request.POST.getlist('querystr')         
                 
+        tables_string = "_".join(tables)
+        wheres_string = "_".join(wheres)
+        where_iss_string = "_".join(where_iss)
+        querystr_string = "_".join(querystrs)
+                
         ## perform the first query:        
         table = tables.pop()        
         where = wheres.pop()
@@ -182,17 +188,81 @@ def querybuilder(request):
         
         ## no more queries so return the data if there is any
         if len(query_results) > 0:
-            table = QueryTable(query_results)
+            
+            paginator = Paginator(query_results, 25) # Show 25 rows per page
+            
+            page = request.GET.get('page')
+            try:
+                page_results = paginator.page(page)
+            except PageNotAnInteger:
+                # If page is not an integer, deliver first page.
+                page_results = paginator.page(1)
+            except EmptyPage:
+                # If page is out of range (e.g. 9999), deliver last page of results.
+                page_results = paginator.page(paginator.num_pages)
+            
+            table = QueryTable(page_results)
 #            RequestConfig(request, paginate={"per_page": 50}).configure(table)
             query_time = time() - start_time
-            return render(request, 'search/queryresults.html', {'table': table, 'count':len(query_results),'querytime':query_time})
+            return render(request, 'search/queryresults.html', {'table': table, 
+                                                                'count':len(query_results),
+                                                                'querytime':query_time, 
+                                                                'page_results':page_results, 
+                                                                'select':select, 
+                                                                'tables_str':tables_string, 
+                                                                'where_str':wheres_string, 
+                                                                'whereis_str':where_iss_string,
+                                                                'querystr_str':querystr_string})
         else:
             message = "Sorry your query didn't return any results, please try another query."
-            return render(request, 'search/querybuilder.html', {'phenotypes':Phenotype.objects.all(),'message':message})  
-            
+            return render(request, 'search/querybuilder.html', {'phenotypes':Phenotype.objects.all(),'message':message})                      
     else:
         # pass all the phenotypes/platforms/studies etc to the form                 
         return render(request, 'search/querybuilder.html', {'phenotypes':Phenotype.objects.all()})
+        
+def querypage(request, page, select, tables_str, where_str, whereis_str, querystr_str):
+    start_time = time()
+    ## split the strings containinf multiple values
+    table_list = tables_str.split("_")
+    where_list = where_str.split("_")
+    whereis_list = whereis_str.split("_")
+    querystr_list = querystr_str.split("_")
+    
+    ## perform the first query:        
+    table = table_list.pop()        
+    where = where_list.pop()
+    where_is = whereis_list.pop()
+    querystr = querystr_list.pop().strip()
+    query_results, query_lookup = query_db(select, table, where, where_is, querystr)
+        
+    ## if there are more queries then perform them on the ids returned from the first query
+    while len(table_list) > 0:
+        table = table_list.pop()        
+        where = where_list.pop()
+        where_is = whereis_list.pop()
+        querystr = querystr_list.pop().strip()
+        query_results, query_lookup = query_db(select, table, where, where_is, querystr)        
+
+    paginator = Paginator(query_results, 25) # Show 25 rows per page
+    
+    try:
+        page_results = paginator.page(page)
+    except EmptyPage:
+        page_results = paginator.page(paginator.num_pages)
+            
+    table = QueryTable(page_results)
+            
+    query_time = time() - start_time
+    
+    return render(request, 'search/queryresults.html', {'table': table, 
+                                                        'count':len(query_results),
+                                                        'querytime':query_time, 
+                                                        'page_results':page_results, 
+                                                        'select':select, 
+                                                        'tables_str':tables_str, 
+                                                        'where_str':where_str, 
+                                                        'whereis_str':whereis_str,
+                                                        'querystr_str':querystr_str})
     
 def query_db (select, table, where, where_is, querystr):
     
@@ -204,7 +274,7 @@ def query_db (select, table, where, where_is, querystr):
         phenotype = Phenotype.objects.get(id=where)            
         if phenotype.phenotype_type.phenotype_type == 'Affection Status':
             if where_is == 'eq':
-                result_set = AffectionStatusPhenotypeValue.objects.filter(phenotype__exact=phenotype.id, phenotype_value__exact=querystr)
+                result_set = AffectionStatusPhenotypeValue.objects.filter(phenotype__exact=phenotype.id, phenotype_value__exact=querystr).values()
             else:
                 print "ERROR: not a valid comparison for an affection status field"
                         
@@ -218,7 +288,7 @@ def query_db (select, table, where, where_is, querystr):
             elif where_is == 'ends_with':
                 result_set = QualitativePhenotypeValue.objects.filter(phenotype__exact=phenotype.id, phenotype_value__iendswith=querystr)
             else:
-                print "ERROR: not a valid comparison for an Qualitative field"
+                print "ERROR: not a valid comparison for a Qualitative field"
                                                             
         elif phenotype.phenotype_type.phenotype_type == 'Quantitative':
             if where_is == 'eq':
@@ -232,13 +302,13 @@ def query_db (select, table, where, where_is, querystr):
             elif where_is == 'lte':
                 result_set = QuantitiatvePhenotypeValue.objects.filter(phenotype__exact=phenotype.id, phenotype_value__lte=querystr)
             else:
-                print "ERROR: not a valid comparison for an Quantitiatve field"
+                print "ERROR: not a valid comparison for a Quantitiatve field"
                         
         if result_set.count() > 0:            
             ## save all the results in a dict matching the results table class
             for result in result_set:
-                query_results_table.append({'identifier':result.individual.id,'value':result.phenotype_value}) 
-                query_results_lookup[result.individual.id] = result.phenotype_value
+                query_results_table.append({'identifier':result['individual_id'],'value':result['phenotype_value']}) 
+                #query_results_lookup[result.individual.id] = result.phenotype_value
                 
     return query_results_table, query_results_lookup
 
@@ -266,7 +336,7 @@ def query_db_with_ids(select, table, where, where_is, querystr, query_lookup):
             elif where_is == 'ends_with':
                 new_result_set = QualitativePhenotypeValue.objects.filter(phenotype__exact=phenotype.id, phenotype_value__iendswith=querystr)
             else:
-                print "ERROR: not a valid comparison for an Qualitative field"
+                print "ERROR: not a valid comparison for a Qualitative field"
                                                             
         elif phenotype.phenotype_type.phenotype_type == 'Quantitative':
             if where_is == 'eq':
@@ -280,7 +350,7 @@ def query_db_with_ids(select, table, where, where_is, querystr, query_lookup):
             elif where_is == 'lte':
                 new_result_set = QuantitiatvePhenotypeValue.objects.filter(phenotype__exact=phenotype.id, phenotype_value__lte=querystr)
             else:
-                print "ERROR: not a valid comparison for an Quantitiatve field"        
+                print "ERROR: not a valid comparison for a Quantitiatve field"        
         
         if new_result_set.count() > 0:
             for result in new_result_set:
