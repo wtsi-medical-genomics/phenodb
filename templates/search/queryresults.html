@@ -9,7 +9,7 @@
 <div class="pagination pagination-centered">
   <ul>
     {% if page_results.has_previous %}
-      <li><a href="?page={{ page_results.previous_page_number }}">previous</a></li>
+      <li><a href={% url search-querypage page_results.previous_page_number select tables_str where_str whereis_str querystr_str %}>next</a></li>
     {% else %}
       <li class="active"><a href="?page={{ page_results.previous_page_number }}">previous</a></li>
     {% endif %}
