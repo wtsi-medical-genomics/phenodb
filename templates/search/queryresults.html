@@ -1,8 +1,14 @@
 {% extends "search/base.html" %}
 
 {% block content %}
-  <p class="lead">Found {{count}} records matching your query.</p>
-  <p class="lead">Query Time: {{querytime}} s.</p>
+  <p class="lead">Found {{count}} records matching your query:</p>
+  
+  <ul>
+  {% for m in query_summary %}  	
+    <li>  <p class="lead">{{ m }}</li>
+  {% endfor %}
+  </ul>
+  
   {% load render_table from django_tables2 %}
   {% render_table table %}
 
@@ -21,6 +27,8 @@
     {% endif %}
   </ul>  
 </div>
+
+<p>Query Time: {{querytime}} s.</p>
 
 <!--
 <div>
