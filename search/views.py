@@ -163,8 +163,10 @@ def querybuilder(request):
         tables = request.POST.getlist('from')
         wheres = request.POST.getlist('where')
         where_iss = request.POST.getlist('is')
-        querystrs = request.POST.getlist('querystr')         
+        querystrs = request.POST.getlist('querystr')
                 
+        results_per_page = 25     # default value
+        
         tables_string = "_".join(tables)
         wheres_string = "_".join(wheres)
         where_iss_string = "_".join(where_iss)
@@ -178,7 +180,8 @@ def querybuilder(request):
         query_results = query_db(select, table, where, where_is, querystr)
         
         ## record the query to print on the results page
-        query_summary = ["from " + table + " table select " + where + " " + where_is + " " + querystr]
+        
+        query_summary = ["FROM " + table + " WHERE " + Phenotype.objects.get(id=where).phenotype_name + " " + where_is + " " + querystr]
         
         ## if there are more queries then perform them on the ids returned from the first query
         while len(tables) > 0:
@@ -188,12 +191,12 @@ def querybuilder(request):
             querystr = querystrs.pop().strip()
             query_results = query_db_with_ids(select, table, where, where_is, querystr, query_results)
             
-            query_summary.append("and from " + table + " table select " + where + " " + where_is + " " + querystr)
+            query_summary.append("+ FROM " + table + " WHERE " + Phenotype.objects.get(id=where).phenotype_name + " " + where_is + " " + querystr)
         
         ## no more queries so return the data if there is any
         if len(query_results) > 0:
             
-            paginator = parse_query_results(query_results)
+            paginator = parse_query_results(query_results, results_per_page)
                         
             page = request.GET.get('page')
             try:
@@ -216,7 +219,8 @@ def querybuilder(request):
                                                                 'where_str':wheres_string, 
                                                                 'whereis_str':where_iss_string,
                                                                 'querystr_str':querystr_string,
-                                                                'query_summary':query_summary})
+                                                                'query_summary':query_summary,
+                                                                'results_per_page':results_per_page})
         else:
             message = "Sorry your query didn't return any results, please try another query."
             return render(request, 'search/querybuilder.html', {'phenotypes':Phenotype.objects.all(),'message':message})                      
@@ -224,7 +228,7 @@ def querybuilder(request):
         # pass all the phenotypes/platforms/studies etc to the form                 
         return render(request, 'search/querybuilder.html', {'phenotypes':Phenotype.objects.all()})
         
-def querypage(request, page, select, tables_str, where_str, whereis_str, querystr_str):
+def querypage(request, page, results_per_page, select, tables_str, where_str, whereis_str, querystr_str):
     start_time = time()
     ## split the strings containing multiple values
     table_list = tables_str.split("_")
@@ -240,7 +244,7 @@ def querypage(request, page, select, tables_str, where_str, whereis_str, queryst
     query_results = query_db(select, table, where, where_is, querystr)
     
     ## record the query to print on the results page
-    query_summary = ["from " + table + " table select " + where + " " + where_is + " " + querystr]
+    query_summary = ["FROM " + table + " WHERE " + Phenotype.objects.get(id=where).phenotype_name + " " + where_is + " " + querystr]
         
     ## if there are more queries then perform them on the ids returned from the first query
     while len(table_list) > 0:
@@ -250,9 +254,9 @@ def querypage(request, page, select, tables_str, where_str, whereis_str, queryst
         querystr = querystr_list.pop().strip()
         query_results = query_db_with_ids(select, table, where, where_is, querystr, query_results)        
 
-        query_summary.append("and from " + table + " table select " + where + " " + where_is + " " + querystr)
+        query_summary.append("+ FROM " + table + " WHERE " + Phenotype.objects.get(id=where).phenotype_name + " " + where_is + " " + querystr)
 
-    paginator = parse_query_results(query_results)
+    paginator = parse_query_results(query_results, results_per_page)
     
     try:
         page_results = paginator.page(page)
@@ -272,7 +276,40 @@ def querypage(request, page, select, tables_str, where_str, whereis_str, queryst
                                                         'where_str':where_str, 
                                                         'whereis_str':whereis_str,
                                                         'querystr_str':querystr_str,
-                                                        'query_summary':query_summary})
+                                                        'query_summary':query_summary,
+                                                        'results_per_page':results_per_page})
+    
+def query_export(request, select, tables_str, where_str, whereis_str, querystr_str):
+    ## split the strings containing multiple values
+    table_list = tables_str.split("_")
+    where_list = where_str.split("_")
+    whereis_list = whereis_str.split("_")
+    querystr_list = querystr_str.split("_")
+    
+    ## perform the first query:        
+    table = table_list.pop()        
+    where = where_list.pop()
+    where_is = whereis_list.pop()
+    querystr = querystr_list.pop().strip()
+    query_results = query_db(select, table, where, where_is, querystr)
+        
+    ## if there are more queries then perform them on the ids returned from the first query
+    while len(table_list) > 0:
+        table = table_list.pop()        
+        where = where_list.pop()
+        where_is = whereis_list.pop()
+        querystr = querystr_list.pop().strip()
+        query_results = query_db_with_ids(select, table, where, where_is, querystr, query_results)        
+    
+    response = HttpResponse(mimetype='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="somefilename.csv"'
+    
+    writer = csv.writer(response)
+
+    for e in query_results:
+        writer.writerow(e)    
+    
+    return response
     
 def query_db (select, table, where, where_is, querystr):
     
@@ -367,7 +404,7 @@ def query_db_with_ids(select, table, where, where_is, querystr, last_query):
         print "ERROR: Search table not currently supported"
         return None
 
-def parse_query_results(query_results):
+def parse_query_results(query_results, results_per_page):
     
     ## query results is a list of individual ids tuples
     ## from the intersection of all queries
@@ -386,4 +423,4 @@ def parse_query_results(query_results):
         ## enter a link to an individual view
         query_result_objs.append({'identifier':ind.id})
             
-    return Paginator(query_result_objs, 25) # Show 25 rows per page
+    return Paginator(query_result_objs, results_per_page)
