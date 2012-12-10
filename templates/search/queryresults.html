@@ -1,50 +1,71 @@
 {% extends "search/base.html" %}
 
+{% block script %}
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.8.1/jquery.min.js"></script>
+ 
+  <script type="text/javascript">
+    $(document).ready(function() {
+ 	  $("[id^=results_per_page]").change(function() { 				
+ 		var perpage = $(this).val() 				
+ 		if (perpage != 'message') {
+		  var url = "";
+		  if (perpage == 'all') {
+		  	url = "/search/querybuilder" + '/1/{{page_results.paginator.count}}/{{select}}/{{tables_str}}/{{where_str}}/{{whereis_str}}/{{querystr_str}}/';
+		  } else {
+		  	url = "/search/querybuilder" + '/{{page_results.number}}/' + perpage + '/{{select}}/{{tables_str}}/{{where_str}}/{{whereis_str}}/{{querystr_str}}/';
+		  }
+		  window.location.href = url;
+		} 								
+	  });			
+	});
+  </script>
+{% endblock %}
+
 {% block content %}
   <p class="lead">Found {{count}} records matching your query:</p>
   
   <ul>
   {% for m in query_summary %}  	
-    <li>  <p class="lead">{{ m }}</li>
+    <p class="lead">{{ m }}
   {% endfor %}
   </ul>
+
+<div align="right">
+  <select name="results_per_page" id="results_per_page">
+    <option value="message">Select Results Per Page</option>
+    <option value="25">25</option>
+    <option value="50">50</option>
+    <option value="100">100</option>
+    <option value="250">250</option>
+    <option value="all">View all</option>            
+  </select>
+</div>
   
   {% load render_table from django_tables2 %}
   {% render_table table %}
 
+<div>
+  <a href={% url search-exportcsv select tables_str where_str whereis_str querystr_str %}><i class="icon-file"></i><em>export to .csv</em></a>
+</div>
+
 <div class="pagination pagination-centered">
   <ul>
     {% if page_results.has_previous %}
-      <li><a href={% url search-querypage page_results.previous_page_number select tables_str where_str whereis_str querystr_str %}>next</a></li>
+      <li><a href={% url search-querypage page_results.previous_page_number results_per_page select tables_str where_str whereis_str querystr_str %}>previous</a></li>
     {% else %}
       <li class="active"><a href="?page={{ page_results.previous_page_number }}">previous</a></li>
     {% endif %}
     <li class="active"><a href="#">{{ page_results.number }}</a></li>
     {% if page_results.has_next %}
-      <li><a href={% url search-querypage page_results.next_page_number select tables_str where_str whereis_str querystr_str %}>next</a></li>
+      <li><a href={% url search-querypage page_results.next_page_number results_per_page select tables_str where_str whereis_str querystr_str %}>next</a></li>
     {% else %}
       <li class="active"><a href="/search/querybuilder/?page={{ page_results.next_page_number }}">next</a></li>
     {% endif %}
   </ul>  
 </div>
 
+
+
 <p>Query Time: {{querytime}} s.</p>
-
-<!--
-<div>
-  <select name="results_per_page">
-    <option value="message">Select Results Per Page</option>
-    <option value="25">25</option>
-    <option value="50">50</option>
-    <option value="100">100</option>
-    <option value="250">250</option>            
-  </select>
-</div>
--->
-
-<div>
-  <a href="/search/querybuilder/export"><i class="icon-file"></i><em>export to .csv</em></a>
-</div>
-
 
 {% endblock %}
