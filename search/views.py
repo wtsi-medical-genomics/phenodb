@@ -398,7 +398,6 @@ def query_db_with_ids(select, table, where, where_is, querystr, last_query):
                 print "ERROR: not a valid comparison for a Quantitiatve field"        
         
         if result_set.count() > 0:
-            print "queryset size " + str(result_set.count())
             intersection_set = set(list(last_query)).intersection(set(list(result_set)))
             return list(intersection_set)
         else:
