@@ -158,72 +158,77 @@ def idSearch(request):
 def querybuilder(request):
     if request.method == 'POST':
         start_time = time()
-        ## becuase we are not using a django form we need to check the form data is valid ourselves 
+        
+        results_per_page = 25     # default value
+                
         select = request.POST['select']            
         tables = request.POST.getlist('from')
         wheres = request.POST.getlist('where')
         where_iss = request.POST.getlist('is')
         querystrs = request.POST.getlist('querystr')
+        
+        ## check that all the queries contain something for each field (each element of each list is true)
+        if (all(querystrs) & all(where_iss) & all(wheres) & all(tables)):
+            tables_string = "_".join(tables)
+            wheres_string = "_".join(wheres)
+            where_iss_string = "_".join(where_iss)
+            querystr_string = "_".join(querystrs)
                 
-        results_per_page = 25     # default value
-        
-        tables_string = "_".join(tables)
-        wheres_string = "_".join(wheres)
-        where_iss_string = "_".join(where_iss)
-        querystr_string = "_".join(querystrs)
-                
-        ## perform the first query:        
-        table = tables.pop()        
-        where = wheres.pop()
-        where_is = where_iss.pop()
-        querystr = querystrs.pop().strip()
-        query_results = query_db(select, table, where, where_is, querystr)
-        
-        ## record the query to print on the results page
-        
-        query_summary = ["FROM " + table + " WHERE " + Phenotype.objects.get(id=where).phenotype_name + " " + where_is + " " + querystr]
-        
-        ## if there are more queries then perform them on the ids returned from the first query
-        while len(tables) > 0:
-            table = tables.pop()
+            ## perform the first query:        
+            table = tables.pop()        
             where = wheres.pop()
             where_is = where_iss.pop()
             querystr = querystrs.pop().strip()
-            query_results = query_db_with_ids(select, table, where, where_is, querystr, query_results)
-            
-            query_summary.append("+ FROM " + table + " WHERE " + Phenotype.objects.get(id=where).phenotype_name + " " + where_is + " " + querystr)
+            query_results = query_db(select, table, where, where_is, querystr)
         
-        ## no more queries so return the data if there is any
-        if len(query_results) > 0:
+            ## record the query to print on the results page
+        
+            query_summary = ["FROM " + table + " WHERE " + Phenotype.objects.get(id=where).phenotype_name + " " + where_is + " " + querystr]
+        
+            ## if there are more queries then perform them on the ids returned from the first query
+            while len(tables) > 0:
+                table = tables.pop()
+                where = wheres.pop()
+                where_is = where_iss.pop()
+                querystr = querystrs.pop().strip()
+                query_results = query_db_with_ids(select, table, where, where_is, querystr, query_results)
             
-            paginator = parse_query_results(query_results, results_per_page)
+                query_summary.append("+ FROM " + table + " WHERE " + Phenotype.objects.get(id=where).phenotype_name + " " + where_is + " " + querystr)
+        
+            ## no more queries so return the data if there is any
+            if len(query_results) > 0:
+            
+                paginator = parse_query_results(query_results, results_per_page)
                         
-            page = request.GET.get('page')
-            try:
-                page_results = paginator.page(page)
-            except PageNotAnInteger:
-                # If page is not an integer, deliver first page.
-                page_results = paginator.page(1)
-            except EmptyPage:
-                # If page is out of range (e.g. 9999), deliver last page of results.
-                page_results = paginator.page(paginator.num_pages)
+                page = request.GET.get('page')
+                try:
+                    page_results = paginator.page(page)
+                except PageNotAnInteger:
+                    # If page is not an integer, deliver first page.
+                    page_results = paginator.page(1)
+                except EmptyPage:
+                    # If page is out of range (e.g. 9999), deliver last page of results.
+                    page_results = paginator.page(paginator.num_pages)
                                     
-            table = QueryTable(page_results)            
-            query_time = time() - start_time
-            return render(request, 'search/queryresults.html', {'table': table, 
-                                                                'count':len(query_results),
-                                                                'querytime':query_time, 
-                                                                'page_results':page_results, 
-                                                                'select':select, 
-                                                                'tables_str':tables_string, 
-                                                                'where_str':wheres_string, 
-                                                                'whereis_str':where_iss_string,
-                                                                'querystr_str':querystr_string,
-                                                                'query_summary':query_summary,
-                                                                'results_per_page':results_per_page})
+                table = QueryTable(page_results)            
+                query_time = time() - start_time
+                return render(request, 'search/queryresults.html', {'table': table, 
+                                                                    'count':len(query_results),
+                                                                    'querytime':query_time, 
+                                                                    'page_results':page_results, 
+                                                                    'select':select, 
+                                                                    'tables_str':tables_string, 
+                                                                    'where_str':wheres_string, 
+                                                                    'whereis_str':where_iss_string,
+                                                                    'querystr_str':querystr_string,
+                                                                    'query_summary':query_summary,
+                                                                    'results_per_page':results_per_page})
+            else:
+                message = "Sorry your query didn't return any results, please try another query."
+                return render(request, 'search/querybuilder.html', {'phenotypes':Phenotype.objects.all(),'message':message})
         else:
-            message = "Sorry your query didn't return any results, please try another query."
-            return render(request, 'search/querybuilder.html', {'phenotypes':Phenotype.objects.all(),'message':message})                      
+            message = "Query form contains missing information, please complete all fields and try again."
+            return render(request, 'search/querybuilder.html', {'phenotypes':Phenotype.objects.all(),'message':message})
     else:
         # pass all the phenotypes/platforms/studies etc to the form                 
         return render(request, 'search/querybuilder.html', {'phenotypes':Phenotype.objects.all()})
