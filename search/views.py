@@ -9,10 +9,11 @@ from django.http import HttpResponse
 from time import time
 from django.core import serializers
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+import json
 
 class SearchForm(forms.Form):
     id_textarea = forms.CharField(widget=forms.Textarea)
-    phenotypes = forms.ModelMultipleChoiceField(queryset=Phenotype.objects.all(), required=False)
+#    phenotypes = forms.ModelMultipleChoiceField(queryset=Phenotype.objects.all(), required=False)
 
 class QueryTable(tables.Table):    
     identifier = tables.Column()
@@ -20,11 +21,13 @@ class QueryTable(tables.Table):
     class Meta:        
         attrs = {'class': 'table table-striped table-bordered'}
 
-class IndividualTable(tables.Table):
-    model = Individual
+class IndividualTable(tables.Table):    
+    individual_id = tables.Column()
+    sex = tables.Column()
+    source = tables.Column()
+    samples = tables.Column()
     
     class Meta:
-        fields = ('id', 'sex')
         attrs = {'class': 'table table-striped table-bordered'}
 
 class PhenotypeTable(tables.Table):        
@@ -89,6 +92,31 @@ def all_json_models(request, menuid):
     json_models = serializers.serialize("json", menuitems)
     return HttpResponse(json_models, mimetype="application/javascript")
 
+def all_search_options(request, menuid):
+    phenotype = Phenotype.objects.get(id=menuid)            
+    menuitems = []
+    if phenotype.phenotype_type.phenotype_type == 'Affection Status':
+        menuitems.append({"value": "1", "text": "True" })
+        menuitems.append({"value": "0", "text": "False"})
+        menuitems.append({"value": "isnull", "text": "Is NULL"})
+        menuitems.append({"value": "notnull", "text": "Is not NULL"})
+    elif phenotype.phenotype_type.phenotype_type == 'Qualitative':        
+        menuitems.append({"value": "eq", "text": "Equals" })
+        menuitems.append({"value": "contains", "text": "Contains" })
+        menuitems.append({"value": "starts_with", "text": "Starts with" })
+        menuitems.append({"value": "ends_with", "text": "Ends with" })
+        menuitems.append({"value": "isnull", "text": "Is NULL"})
+        menuitems.append({"value": "notnull", "text": "Is not NULL"})        
+    elif phenotype.phenotype_type.phenotype_type == 'Quantitative':        
+        menuitems.append({"value": "eq", "text": "==" })
+        menuitems.append({"value": "gt", "text": ">" })
+        menuitems.append({"value": "gte", "text": ">=" })
+        menuitems.append({"value": "lt", "text": "<" })
+        menuitems.append({"value": "lte", "text": "<=" })
+        menuitems.append({"value": "isnull", "text": "Is NULL"})
+        menuitems.append({"value": "notnull", "text": "Is not NULL"})
+    return HttpResponse(json.dumps(menuitems), mimetype="application/javascript")
+
 def idSearch(request):
     if request.method == 'POST':
         form = SearchForm(request.POST)
@@ -96,7 +124,7 @@ def idSearch(request):
             
             textarea_values = form.cleaned_data['id_textarea'].splitlines()
             
-            selected_phenotypes = form.cleaned_data['phenotypes']
+#            selected_phenotypes = form.cleaned_data['phenotypes']
             
             ## for each id
             inds = []
@@ -136,8 +164,7 @@ def idSearch(request):
                         ind_results = {'individual_id':ind.individual_string,
                                        'sex':ind.individual.sex,
                                        'source':ind.source.source_name,
-                                       'samples':samples,
-                                       'phenotype_values':phenotype_values
+                                       'samples':samples                                       
                                        }
                                             
                         
@@ -168,7 +195,7 @@ def querybuilder(request):
         querystrs = request.POST.getlist('querystr')
         
         ## check that all the queries contain something for each field (each element of each list is true)
-        if (all(querystrs) & all(where_iss) & all(wheres) & all(tables)):
+        if (all(where_iss) & all(wheres) & all(tables)):
             tables_string = "_".join(tables)
             wheres_string = "_".join(wheres)
             where_iss_string = "_".join(where_iss)
@@ -191,9 +218,13 @@ def querybuilder(request):
                 where = wheres.pop()
                 where_is = where_iss.pop()
                 querystr = querystrs.pop().strip()
-                query_results = query_db_with_ids(select, table, where, where_is, querystr, query_results)
-            
-                query_summary.append("+ FROM " + table + " WHERE " + Phenotype.objects.get(id=where).phenotype_name + " " + where_is + " " + querystr)
+                if len(query_results) > 0:
+                    query_results = query_db_with_ids(select, table, where, where_is, querystr, query_results)
+                    query_summary.append("+ FROM " + table + " WHERE " + Phenotype.objects.get(id=where).phenotype_name + " " + where_is + " " + querystr)
+                else: 
+                    message = "Sorry your query didn't return any results, please try another query."
+                    return render(request, 'search/querybuilder.html', {'phenotypes':Phenotype.objects.all(),'message':message})
+                
         
             ## no more queries so return the data if there is any
             if len(query_results) > 0:
@@ -325,6 +356,10 @@ def query_db (select, table, where, where_is, querystr):
             ## the user should only be offered the equals option for this type of phenotype
             if where_is == 'eq':
                 return AffectionStatusPhenotypeValue.objects.filter(phenotype__exact=phenotype.id, phenotype_value__exact=querystr).values_list('individual_id')
+            elif where_is == 'notnull':
+                return AffectionStatusPhenotypeValue.objects.filter(phenotype__exact=phenotype.id, phenotype_value__isnull=False).values_list('individual_id')
+            elif where_is == 'isnull':
+                return AffectionStatusPhenotypeValue.objects.filter(phenotype__exact=phenotype.id, phenotype_value__isnull=True).values_list('individual_id')
             else:
                 print "ERROR: not a valid comparison for an affection status field"
                 return None                
@@ -338,6 +373,10 @@ def query_db (select, table, where, where_is, querystr):
                 return QualitativePhenotypeValue.objects.filter(phenotype__exact=phenotype.id, phenotype_value__istartswith=querystr).values_list('individual_id')
             elif where_is == 'ends_with':
                 return QualitativePhenotypeValue.objects.filter(phenotype__exact=phenotype.id, phenotype_value__iendswith=querystr).values_list('individual_id')
+            elif where_is == 'isnull':
+                return QualitativePhenotypeValue.objects.filter(phenotype__exact=phenotype.id, phenotype_value__isnull=True).values_list('individual_id')
+            elif where_is == 'notnull':
+                return QualitativePhenotypeValue.objects.filter(phenotype__exact=phenotype.id, phenotype_value__isnull=False).values_list('individual_id')
             else:
                 print "ERROR: not a valid comparison for a Qualitative field"
                 return None
@@ -353,6 +392,10 @@ def query_db (select, table, where, where_is, querystr):
                 return QuantitiatvePhenotypeValue.objects.filter(phenotype__exact=phenotype.id, phenotype_value__lt=querystr).values_list('individual_id')
             elif where_is == 'lte':
                 return QuantitiatvePhenotypeValue.objects.filter(phenotype__exact=phenotype.id, phenotype_value__lte=querystr).values_list('individual_id')
+            elif where_is == 'isnull':
+                return QuantitiatvePhenotypeValue.objects.filter(phenotype__exact=phenotype.id, phenotype_value__isnull=True).values_list('individual_id')
+            elif where_is == 'notnull':
+                return QuantitiatvePhenotypeValue.objects.filter(phenotype__exact=phenotype.id, phenotype_value__isnull=False).values_list('individual_id')
             else:
                 print "ERROR: not a valid comparison for a Quantitiatve field"
                 return None
@@ -368,6 +411,10 @@ def query_db_with_ids(select, table, where, where_is, querystr, last_query):
         if phenotype.phenotype_type.phenotype_type == 'Affection Status':
             if where_is == 'eq':
                 result_set = AffectionStatusPhenotypeValue.objects.filter(phenotype__exact=phenotype.id, phenotype_value__exact=querystr).values_list('individual_id')
+            elif where_is == 'notnull':
+                result_set = AffectionStatusPhenotypeValue.objects.filter(phenotype__exact=phenotype.id, phenotype_value__isnull=False).values_list('individual_id')
+            elif where_is == 'isnull':
+                result_set = AffectionStatusPhenotypeValue.objects.filter(phenotype__exact=phenotype.id, phenotype_value__isnull=True).values_list('individual_id')
             else:
                 print "ERROR: not a valid comparison for an affection status field"
                         
@@ -380,6 +427,10 @@ def query_db_with_ids(select, table, where, where_is, querystr, last_query):
                 result_set = QualitativePhenotypeValue.objects.filter(phenotype__exact=phenotype.id, phenotype_value__istartswith=querystr).values_list('individual_id')
             elif where_is == 'ends_with':
                 result_set = QualitativePhenotypeValue.objects.filter(phenotype__exact=phenotype.id, phenotype_value__iendswith=querystr).values_list('individual_id')
+            elif where_is == 'isnull':
+                result_set = QualitativePhenotypeValue.objects.filter(phenotype__exact=phenotype.id, phenotype_value__isnull=True).values_list('individual_id')
+            elif where_is == 'notnull':
+                result_set = QualitativePhenotypeValue.objects.filter(phenotype__exact=phenotype.id, phenotype_value__isnull=False).values_list('individual_id')
             else:
                 print "ERROR: not a valid comparison for a Qualitative field"
                                                             
@@ -394,9 +445,12 @@ def query_db_with_ids(select, table, where, where_is, querystr, last_query):
                 result_set = QuantitiatvePhenotypeValue.objects.filter(phenotype__exact=phenotype.id, phenotype_value__lt=querystr).values_list('individual_id')
             elif where_is == 'lte':
                 result_set = QuantitiatvePhenotypeValue.objects.filter(phenotype__exact=phenotype.id, phenotype_value__lte=querystr).values_list('individual_id')
+            elif where_is == 'isnull':
+                result_set = QuantitiatvePhenotypeValue.objects.filter(phenotype__exact=phenotype.id, phenotype_value__isnull=True).values_list('individual_id')
+            elif where_is == 'notnull':
+                result_set = QuantitiatvePhenotypeValue.objects.filter(phenotype__exact=phenotype.id, phenotype_value__isnull=False).values_list('individual_id')
             else:
                 print "ERROR: not a valid comparison for a Quantitiatve field"        
-        
         if result_set.count() > 0:
             intersection_set = set(list(last_query)).intersection(set(list(result_set)))
             return list(intersection_set)
