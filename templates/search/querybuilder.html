@@ -1,126 +1,43 @@
-{% extends "search/base.html" %}    
+{% extends "search/base.html" %}
 
 {% block script %}
-  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.8.1/jquery.min.js"></script>
- 
-  <script type="text/javascript">
-    $(document).ready(function() {
-            $('#btnAdd').click(function() {
-                var num     = $('.clonedInput').length; // how many "duplicatable" input fields we currently have
-                var newNum  = new Number(num + 1);      // the numeric ID of the new input field being added
- 
-                // create the new element via clone(), and manipulate it's ID using newNum value
-                var newElem = $('#input' + num).clone().attr('id', 'input' + newNum);
-               
-                newElem.find(':input').attr('id', function(i, val) {
-                  return val + newNum;
-                });
-               
-                // insert the new element after the last "duplicatable" input field
-                $('#input' + num).after(newElem);
- 
-                // enable the "remove" button
-                $('#btnDel').removeAttr("disabled");
-                
-                // Maximum number of forms
-                if (newNum == 5)
-                    $('#btnAdd').attr('disabled','disabled');
-                
-                $("[id^=from]").change(function() { 				
- 					var idstr = $(this).attr("id")
- 					var idarray = idstr.split("_") 				
- 					var idnum = idarray[1] 				
- 				
- 					if ($(this).val() == 'message') {
-						$("#where_" + idnum).attr('disabled', true);
-						// remove the current where options
-					} else {
-						var url = "/search/querybuilder/" + $(this).val() + "/all_json_models";
-						var from = $(this).val();
-						$.getJSON(url, function(where) {
-							var options = '<option value="message">Select a filter</option>';
-							for (var i = 0; i < where.length; i++) {
-								// change phenotype_name to "from_value + name"
-								options += '<option value="' + where[i].pk + '">' + where[i].fields['phenotype_name'] + '</option>';
-							}
-							$("#where_" + idnum).html(options);						
-						});
-					} 								
-				});
-				
-				$("[id^=where]").change(function() {	
-					var idstr = $(this).attr("id")
- 					var idarray = idstr.split("_") 				
- 					var idnum = idarray[1]			
- 				
- 					if ($(this).val() == 'message') {					
-						$("#is_" + idnum).attr('disabled', true);
-					} else {
-						var url = "/search/querybuilder/" + $(this).val() + "/all_search_options";										
-						$.getJSON(url, function(data) {
-							var options = '<option value="message">Select a filter</option>';
-							for (var i = 0; i < data.length; i++) {													
-								options += '<option value="' + data[i].value + '">' + data[i].text + '</option>';							
-							}
-							$("#is_" + idnum).html(options);
-						});											
-					} 								
-				});
-        
-            });
- 
-            $('#btnDel').click(function() {
-                var num = $('.clonedInput').length; // how many "duplicatable" input fields we currently have
-                $('#input' + num).remove();     // remove the last element
- 
-                // enable the "add" button
-                $('#btnAdd').removeAttr("disabled");
- 
-                // if only one element remains, disable the "remove" button
-                if (num-1 == 1)
-                    $('#btnDel').attr('disabled','disabled');
-            });
- 			 		
- 			$('#btnAddOut').click(function() {
-                var num     = $('.clonedOutput').length; // how many "duplicatable" input fields we currently have
-                var newNum  = new Number(num + 1);      // the numeric ID of the new input field being added
- 
-                // create the new element via clone(), and manipulate it's ID using newNum value
-                var newElem = $('#output' + num).clone().attr('id', 'output' + newNum);
-               
-                // insert the new element after the last "duplicatable" input field
-                $('#output' + num).after(newElem);
- 
-                // enable the "remove" button
-                $('#btnDelOut').removeAttr("disabled");
-                
-                // Maximum number of forms
-                if (newNum == 3)
-                    $('#btnAddOut').attr('disabled','disabled');
-            });
- 
-            $('#btnDelOut').click(function() {
-                var num = $('.clonedOutput').length; // how many "duplicatable" input fields we currently have
-                $('#output' + num).remove();     // remove the last element
- 
-                // enable the "add" button
-                $('#btnAddOut').removeAttr("disabled");
- 
-                // if only one element remains, disable the "remove" button
-                if (num-1 == 1)
-                    $('#btnDelOut').attr('disabled','disabled');
-            });
- 			
- 			$("[id^=from]").change(function() { 				
- 				//alert("hello");
- 				var idstr = $(this).attr("id")
- 				var idarray = idstr.split("_") 				
- 				var idnum = idarray[1] 				
- 				
- 				if ($(this).val() == 'message') {
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.8.1/jquery.min.js"></script>
+<script src="//netdna.bootstrapcdn.com/twitter-bootstrap/2.2.2/js/bootstrap.min.js"></script>
+
+<script type="text/javascript">
+	$(document).ready(function() {
+		$('#btnAdd').click(function() {
+			var num = $('.clonedInput').length;
+			// how many "duplicatable" input fields we currently have
+			var newNum = new Number(num + 1);
+			// the numeric ID of the new input field being added
+
+			// create the new element via clone(), and manipulate it's ID using newNum value
+			var newElem = $('#input' + num).clone().attr('id', 'input' + newNum);
+
+			newElem.find(':input').attr('id', function(i, val) {
+				return val + newNum;
+			});
+
+			// insert the new element after the last "duplicatable" input field
+			$('#input' + num).after(newElem);
+
+			// enable the "remove" button
+			$('#btnDel').removeAttr("disabled");
+
+			// Maximum number of forms
+			if (newNum == 5)
+				$('#btnAdd').attr('disabled', 'disabled');
+
+			$("[id^=from]").change(function() {
+				var idstr = $(this).attr("id")
+				var idarray = idstr.split("_")
+				var idnum = idarray[1]
+
+				if ($(this).val() == 'message') {
 					$("#where_" + idnum).attr('disabled', true);
 					// remove the current where options
-				} else if ($(this).val() == 'phenotype') {
+				} else {
 					var url = "/search/querybuilder/" + $(this).val() + "/all_json_models";
 					var from = $(this).val();
 					$.getJSON(url, function(where) {
@@ -129,121 +46,213 @@
 							// change phenotype_name to "from_value + name"
 							options += '<option value="' + where[i].pk + '">' + where[i].fields['phenotype_name'] + '</option>';
 						}
-						$("#where_" + idnum).html(options);						
+						$("#where_" + idnum).html(options);
 					});
-				}							
+				}
 			});
-			// change the search options based on the type of filter
-			$("[id^=where]").change(function() {	
-				// get the id number of the menu that changed so that we change the correct search filter
+
+			$("[id^=where]").change(function() {
 				var idstr = $(this).attr("id")
- 				var idarray = idstr.split("_") 				
- 				var idnum = idarray[1]			
- 				
- 				if ($(this).val() == 'message') {					
+				var idarray = idstr.split("_")
+				var idnum = idarray[1]
+
+				if ($(this).val() == 'message') {
 					$("#is_" + idnum).attr('disabled', true);
 				} else {
-					var url = "/search/querybuilder/" + $(this).val() + "/all_search_options";										
+					var url = "/search/querybuilder/" + $(this).val() + "/all_search_options";
 					$.getJSON(url, function(data) {
 						var options = '<option value="message">Select a filter</option>';
-						for (var i = 0; i < data.length; i++) {													
-							options += '<option value="' + data[i].value + '">' + data[i].text + '</option>';							
+						for (var i = 0; i < data.length; i++) {
+							options += '<option value="' + data[i].value + '">' + data[i].text + '</option>';
 						}
 						$("#is_" + idnum).html(options);
-					});											
-				} 								
-			});			
- 			
-            $('#btnDel').attr('disabled','disabled');
-            $('#btnDelOut').attr('disabled','disabled');
-        });
-        // load function once the page has changed
-        //$(document).onchange(function() {
-        //	alert("onchange");
-        //)};
-    </script>
+						// if data contains just 4 entries then it is an affection status so does not need a text entry field
+						if (data.length > 4) {
+							$("#querystr_" + idnum).prop('disabled', false);
+						} else {
+							$("#querystr_" + idnum).prop('value', '');
+							$("#querystr_" + idnum).prop('disabled', true);
+						}
+					});
+				}
+			});
+
+		});
+
+		$('#btnDel').click(function() {
+			var num = $('.clonedInput').length;
+			// how many "duplicatable" input fields we currently have
+			$('#input' + num).remove();
+			// remove the last element
+
+			// enable the "add" button
+			$('#btnAdd').removeAttr("disabled");
+
+			// if only one element remains, disable the "remove" button
+			if (num - 1 == 1)
+				$('#btnDel').attr('disabled', 'disabled');
+		});
+
+		$("[id^=from]").change(function() {
+			//alert("hello");
+			var idstr = $(this).attr("id")
+			var idarray = idstr.split("_")
+			var idnum = idarray[1]
+
+			if ($(this).val() == 'message') {
+				$("#where_" + idnum).attr('disabled', true);
+				// remove the current where options
+			} else if ($(this).val() == 'phenotype') {
+				var url = "/search/querybuilder/" + $(this).val() + "/all_json_models";
+				var from = $(this).val();
+				$.getJSON(url, function(where) {
+					var options = '<option value="message">Select a filter</option>';
+					for (var i = 0; i < where.length; i++) {
+						// change phenotype_name to "from_value + name"
+						options += '<option value="' + where[i].pk + '">' + where[i].fields['phenotype_name'] + '</option>';
+					}
+					$("#where_" + idnum).html(options);
+				});
+			}
+		});
+		// change the search options based on the type of filter
+		$("[id^=where]").change(function() {
+			// get the id number of the menu that changed so that we change the correct search filter
+			var idstr = $(this).attr("id")
+			var idarray = idstr.split("_")
+			var idnum = idarray[1]
+
+			if ($(this).val() == 'message') {
+				$("#is_" + idnum).attr('disabled', true);
+			} else {
+				var url = "/search/querybuilder/" + $(this).val() + "/all_search_options";
+				$.getJSON(url, function(data) {
+					var options = '<option value="message">Select a filter</option>';
+					for (var i = 0; i < data.length; i++) {
+						options += '<option value="' + data[i].value + '">' + data[i].text + '</option>';
+					}
+					$("#is_" + idnum).html(options);
+					// if data contains just 4 entries then it is an affection status so does not need a text entry field
+					if (data.length > 4) {												
+						$("#querystr_" + idnum).prop('disabled', false);
+					} else {
+						$("#querystr_" + idnum).prop('value', '');
+						$("#querystr_" + idnum).prop('disabled', true);
+					}
+				});
+			}
+		});
+
+		$('input[name=searchIn]').change(function() {
+			if (this.value == "userlist") {
+				$('#individual_list, #individual_file').prop('disabled', false);
+			} else {
+				$('#individual_list, #individual_file').prop('disabled', true);
+			}
+		});
+
+		$('#btnDel').attr('disabled', 'disabled');
+		$('#btnDelOut').attr('disabled', 'disabled');
+	});
+	// load function once the page has changed
+	//$(document).onchange(function() {
+	//	alert("onchange");
+	//)};
+</script>
 {% endblock %}
 
 {% block content %}
-  <p class="lead">Build a query:</p>  
-  {% if message %}
-    <p class="text-error"><em>{{message}}</em></p>
-  {% endif %}
-  <form class="form-inline" action="" method="post">
-    
-    {% csrf_token %}      
-    
-    <div class="row" style="margin-top: 10px;margin-bottom: 10px">
-      <div class="span9">
-        <div id="input1" class="clonedInput" style="margin-top: 10px;margin-bottom: 10px">
-          <select name="from" id="from_12">
-            <option value="message">Select a filter type</option>
-            <option value="phenotype">Phenotype</option>
-            <!-- <option value="platform">Platform</option> -->
-            <!-- <option value="study">Study</option> -->
-            <!-- <option value="qc">QC</option> -->           
-          </select>
-          <select name="where" id="where_12"></select>
-          <select name="is" id="is_12"></select>
-          <input type="text" name="querystr" id="querystr_1" />      
-        </div>  
-      </div>
-    </div>
-    
-    <div class = row style="margin-top: 10px;margin-bottom: 10px">
-      <div class="span9">
-    	<input type="button" id="btnAdd" value="add another filter" class="btn btn-default btn-success" />
-        <input type="button" id="btnDel" value="remove filter" class="btn btn-default btn-danger"/>
-       </div> 
-    </div> 
-    
-    <p class="lead" style="margin-top: 20px;margin-bottom: 10px">Search in:</p>
-    <div class="row" style="margin-top: 10px;margin-bottom: 10px">
-      <div class="span9">        
-		<label class="radio"><input type="radio" name="searchIn" id="optionsRadios1" value="all" checked>All records</label>
-		<label class="radio"><input type="radio" name="searchIn" id="optionsRadios2" value="cases" disabled>Cases</label>
-		<label class="radio"><input type="radio" name="searchIn" id="optionsRadios3" value="control" disabled>Controls</label>
-		<label class="radio"><input type="radio" name="searchIn" id="optionsRadios4" value="userlist">User defined list</label>        
-      </div>
-    </div>	    
-    
-     <div class="row" style="margin-top: 10px;margin-bottom: 10px">
-      <div class="span9">        
-		<textarea rows="3" name="individual_list" disabled></textarea>		
-      </div>
-    </div>	
-    
-    <div class="row" style="margin-top: 10px;margin-bottom: 10px">
-      <div class="span9">        
-		<input type="file" name="individual_file" disabled>		
-      </div>
-    </div>	
-    
-    <p class="lead" style="margin-top: 20px;margin-bottom: 10px">Output:</p>
-    <div class="row" style="margin-top: 10px;margin-bottom: 10px">
-      <div class="span9">
-        <div id="output1" class="clonedOutput" style="margin-top: 10px;margin-bottom: 10px">
-          <select name="select" style="margin-bottom:4px;">
-            <option value="individuals">Individual ID</option>   
-          </select>
-        </div>
-      </div>
-    </div>
-    
-    <!--
-    <div class = row style="margin-top: 10px;margin-bottom: 10px">
-      <div class="span9">
-    	<input type="button" id="btnAddOut" value="add another column" class="btn btn-default btn-success" />
-        <input type="button" id="btnDelOut" value="remove column" class="btn btn-default btn-danger"/>
-      </div>
-    </div>
-    -->
-    
-    <div class = row style="margin-top: 10px;margin-bottom: 10px">
-      <div class="span9">        
-        <input type="submit" value="Search" class="btn btn-large btn-primary"/>
-      </div>
-    </div>
-    
-  </form> 
+<p class="lead">
+	Build a query:
+</p>
+{% if message %}
+<p class="text-error">
+	<em>{{message}}</em>
+</p>
+{% endif %}
+<form class="form-inline" action="" method="post" enctype="multipart/form-data">
+
+	{% csrf_token %}
+
+	<div class="row" style="margin-top: 10px;margin-bottom: 10px">
+		<div class="span9">
+			<div id="input1" class="clonedInput" style="margin-top: 10px;margin-bottom: 10px">
+				<select name="from" id="from_12">
+					<option value="message">Select a filter type</option>
+					<option value="phenotype">Phenotype</option>
+					<!-- <option value="platform">Platform</option> -->
+					<!-- <option value="study">Study</option> -->
+					<!-- <option value="qc">QC</option> -->
+				</select>
+				<select name="where" id="where_12"></select>
+				<select name="is" id="is_12"></select>
+				<input type="text" name="querystr" id="querystr_12" />
+			</div>
+		</div>
+	</div>
+
+	<div class = row style="margin-top: 10px;margin-bottom: 10px">
+		<div class="span9">
+			<input type="button" id="btnAdd" value="add another filter" class="btn btn-default btn-success" />
+			<input type="button" id="btnDel" value="remove filter" class="btn btn-default btn-danger"/>
+		</div>
+	</div>
+
+	<p class="lead" style="margin-top: 20px;margin-bottom: 10px">
+		Search in:
+	</p>
+	<div class="row" style="margin-top: 10px;margin-bottom: 10px">
+		<div class="span9">
+			<label class="radio">
+				<input type="radio" name="searchIn" id="optionsRadios1" value="all" checked>
+				All records</label>
+			<!-- <label class="radio"><input type="radio" name="searchIn" id="optionsRadios2" value="cases" disabled>Cases</label> -->
+			<!-- <label class="radio"><input type="radio" name="searchIn" id="optionsRadios3" value="control" disabled>Controls</label> -->
+			<label class="radio">
+				<input type="radio" name="searchIn" id="optionsRadios4" value="userlist">
+				User defined list</label>
+		</div>
+	</div>
+
+	<div class="row" style="margin-top: 10px;margin-bottom: 10px">
+		<div class="span9">
+			<textarea rows="3" name="individual_list" id="individual_list" disabled></textarea>
+		</div>
+	</div>
+
+	<div class="row" style="margin-top: 10px;margin-bottom: 10px">
+		<div class="span9">
+			<input type="file" name="individual_file" id="individual_file" disabled>
+		</div>
+	</div>
+
+	<p class="lead" style="margin-top: 20px;margin-bottom: 10px">
+		Output:
+	</p>
+	<div class="row" style="margin-top: 10px;margin-bottom: 10px">
+		<div class="span6">
+			<div class="accordion" id="accordion2">
+				<div class="accordion-group">
+					<div class="accordion-heading">
+						<a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion2" href="#collapseOne"> Individual details </a>
+					</div>
+					<div id="collapseOne" class="accordion-body collapse in">
+						<div class="accordion-inner">
+							<label class="checkbox inline"><input type="checkbox" name="output" value="IndId">Individual ID</label>
+							<label class="checkbox inline"><input type="checkbox" name="output" value="source">Source</label>
+							<label class="checkbox inline"><input type="checkbox" name="output" value="sex">Sex</label>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<div class = row style="margin-top: 10px;margin-bottom: 10px">
+		<div class="span9">
+			<input type="submit" value="Search" class="btn btn-large btn-primary"/>
+		</div>
+	</div>
+
+</form>
 {% endblock %}
