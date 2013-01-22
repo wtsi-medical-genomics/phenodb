@@ -1,6 +1,6 @@
 from django.template import RequestContext
 from django.shortcuts import render, render_to_response
-from search.models import IndividualIdentifier, Phenotype, AffectionStatusPhenotypeValue, QualitativePhenotypeValue, QuantitiatvePhenotypeValue, Sample, Platform, Study, QC, Individual, Sample, Source
+from search.models import *
 from django import forms
 import django_tables2 as tables
 from django_tables2 import RequestConfig
@@ -11,27 +11,11 @@ from django.core import serializers
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 import json
 
-class SearchForm(forms.Form):
-    id_textarea = forms.CharField(widget=forms.Textarea)
-#    phenotypes = forms.ModelMultipleChoiceField(queryset=Phenotype.objects.all(), required=False)
-
-class QueryTable(tables.Table):    
-    identifier = tables.Column()
-    
-    class Meta:        
-        attrs = {'class': 'table table-striped table-bordered'}
-
-## needs testing
-## http://stackoverflow.com/questions/14134488/trouble-trying-to-dynamically-add-methods-to-python-class-i-e-django-tables2
-def define_table(columns):
-    attrs = dict((c, tables.Column()) for c in columns)
-    klass = type('DynamicTable', (tables.Table,), attrs)
-    return klass
 
 class PhenotypeTable(tables.Table):        
     class Meta:
         model = Phenotype
-        fields = ('phenotype_name', 'phenotype_description')
+        fields = ('phenotype_name', 'phenotype_description', 'phenotype_type')
         attrs = {'class': 'table table-striped table-bordered'}
 
 class PlatformTable(tables.Table):        
@@ -101,13 +85,6 @@ def showSamples(request):
     table = SampleTable(Sample.objects.all())
     return render(request, 'search/dataview.html', {'table': table})
 
-def showIndividual(request, ind_id):
-    queryresult = IndividualIdentifier.objects.get(individual_string=ind_id)
-    ## fill up the table info
-    table_info = {}
-    table = IndividualTable(table_info)
-    return render(request, 'search/dataview.html', {'table': table})
-
 def all_json_models(request, menuid):
     if menuid == 'phenotype':
         menuitems = Phenotype.objects.all()
@@ -145,67 +122,50 @@ def all_search_options(request, menuid):
         menuitems.append({"value": "notnull", "text": "Is not NULL"})
     return HttpResponse(json.dumps(menuitems), mimetype="application/javascript")
 
-def idSearch(request):
-    if request.method == 'POST':
-        form = SearchForm(request.POST)
-        if form.is_valid(): # All validation rules pass
-            
-            textarea_values = form.cleaned_data['id_textarea'].splitlines()
-                        
-            ## for each id
-            inds = []
-            for line in textarea_values:
-                query_id = line.strip()
-                query_results = IndividualIdentifier.objects.filter(individual_string=query_id)                
-                if query_results.count() > 0:                                                
-                    for ind in query_results:
-                        samples = []
-                        for sample in Sample.objects.filter(individual=ind):
-                            samples.append(sample.sample_id)
+def generate_query_results_table(output, query_results):
+    
+    table_html = "<table class=\"table table-striped table-bordered\">\n"
+    
+    for column in output:
+        table_html = "".join((table_html, "<th>"+ column +"</th>\n"))
 
-                        ## deafult columns
-                        ind_results = {'individual_id':ind.individual_string,
-                                       'sex':ind.individual.sex,
-                                       'source':ind.source.source_name,
-                                       'samples':samples                                       
-                                       }
-                        
-                        inds.append(ind_results)
-            table = IndividualTable(inds)
-            return render(request, 'search/idresults.html', {'table': table})
-#            else:
-#            id not found
+    for results_row in query_results:
 
-    else:
-        form = SearchForm() # An unbound form
-        return render(request, 'search/idsearch.html', {'form': form,})
+        table_html = "".join((table_html, "<tr>\n"))
+
+        for value in results_row:
+            table_html = "".join((table_html, "<td>" + value + "</td>\n"))
+
+        table_html = "".join((table_html, "</tr>\n"))
+
+    return "".join((table_html, "</table>\n"))
 
 def querybuilder(request):
     if request.method == 'POST':
         start_time = time()        
         results_per_page = 25     # default value
-        tables = request.POST.getlist('from')
-        wheres = request.POST.getlist('where')
+        tables    = request.POST.getlist('from')
+        wheres    = request.POST.getlist('where')
         where_iss = request.POST.getlist('is')
         querystrs = request.POST.getlist('querystr')        
-        search_in = request.POST['searchIn']
+        search_in = request.POST['searchIn']        
+        output    = request.POST.getlist('output')
         
-        output = request.POST.getlist('output')
-        
-        ## check that all the queries contain something for each field (each element of each list is true)
+        ## check that all the queries contain something for each required field (each element of each list is true)
         if (all(where_iss) & all(wheres) & all(tables)):
-            tables_string = "_".join(tables)
-            wheres_string = "_".join(wheres)
+            tables_string    = "_".join(tables)
+            wheres_string    = "_".join(wheres)
             where_iss_string = "_".join(where_iss)
-            querystr_string = "_".join(querystrs)
+            querystr_string  = "_".join(querystrs)
+            output_string    = "_".join(output)
             
             ## search all records or from a list of individuals
             if (search_in == 'userlist'):
-                ## get the textarea contents as a string
-                textarea_values = request.POST['individual_list'].splitlines()
+                
                 query_ids = []
-                            
+                
                 if (request.POST['individual_list']):
+                    textarea_values = request.POST['individual_list'].splitlines()
                     for line in textarea_values:
                         if (line.strip()):
                             query_ids.append(line.strip())
@@ -222,17 +182,57 @@ def querybuilder(request):
                         return render(request, 'search/querybuilder.html', {'phenotypes':Phenotype.objects.all(),'message':message})                    
                                 
                 if (len(query_ids) > 0):                    
-                    query_results = []                
+                    # array of tuples
+                    db_ids = []                
                     for ind_id in query_ids:                                                
                         query_result = IndividualIdentifier.objects.filter(individual_string=ind_id).values_list('individual_id')                        
                         if (len(query_result) > 0):
-                            query_results.append(query_result)
+                            # append just the first tuple of the list
+                            db_ids.append(query_result[0])
+                                                        
+                    if (len(db_ids) > 0):
                         
-                    ## need to convert the list of querysets into a single queryset??
-                
-                    if (len(query_results) > 0):
-                        message = "Found " + str(len(query_ids)) + " ids"
-                        return render(request, 'search/querybuilder.html', {'phenotypes':Phenotype.objects.all(),'message':message})
+                        print len(db_ids)
+                        
+                        results = perform_queries_with_ids(request, tables, wheres, where_iss, querystrs, db_ids)
+                        result_ids = results[0]
+                        query_summary = results[1]
+                        
+                        print len(result_ids)
+                        
+                        ## no more queries so return the data if there is any
+                        if len(result_ids) > 0:
+                    
+                            query_ids_objs = parse_query_results(result_ids)
+                    
+                            paginator = Paginator(query_ids_objs, results_per_page)
+                    
+                            page = request.GET.get('page')
+                            try:
+                                page_results = paginator.page(page)
+                            except PageNotAnInteger:
+                                # If page is not an integer, deliver first page.
+                                page_results = paginator.page(1)
+                            except EmptyPage:
+                                # If page is out of range (e.g. 9999), deliver last page of results.
+                                page_results = paginator.page(paginator.num_pages)
+                    
+                            table_html = generate_query_results_table(output, get_output_data(page_results, output))
+                            query_time = time() - start_time
+                            return render(request, 'search/queryresults.html', {'tablehtml': table_html,
+                                                                                'output_str': output_string, 
+                                                                                'count':len(query_ids),
+                                                                                'querytime':query_time, 
+                                                                                'page_results':page_results,                                                                         
+                                                                                'tables_str':tables_string, 
+                                                                                'where_str':wheres_string, 
+                                                                                'whereis_str':where_iss_string,
+                                                                                'querystr_str':querystr_string,
+                                                                                'query_summary':query_summary,
+                                                                                'results_per_page':results_per_page})
+                        else:
+                            message = "Sorry your query didn't return any results, please try another query."
+                            return render(request, 'search/querybuilder.html', {'phenotypes':Phenotype.objects.all(),'message':message})
                     else:
                         message = "Sorry none of the individual IDs you provided could be found, please try again."
                         return render(request, 'search/querybuilder.html', {'phenotypes':Phenotype.objects.all(),'message':message})
@@ -241,72 +241,22 @@ def querybuilder(request):
                     message = "No individual IDs were input, please try again."
                     return render(request, 'search/querybuilder.html', {'phenotypes':Phenotype.objects.all(),'message':message})
                 
-                
-                ## if there are more queries then perform them on the ids returned from the first query
-#                while len(tables) > 0:
-#                    table = tables.pop()
-#                    where = wheres.pop()
-#                    where_is = where_iss.pop()
-#                    querystr = querystrs.pop().strip()
-#                    if len(query_results) > 0:
-#                        query_results = query_db_with_ids(select, table, where, where_is, querystr, query_results)
-#                        query_summary.append("+ FROM " + table + " WHERE " + Phenotype.objects.get(id=where).phenotype_name + " " + where_is + " " + querystr)
-#                    else: 
-#                        message = "Sorry your query didn't return any results, please try another query."
-#                        return render(request, 'search/querybuilder.html', {'phenotypes':Phenotype.objects.all(),'message':message})
-                
                 ## allow the users to just supply the list of inds and a null filter
                 
-                
+            ## else search all records - as before                
             elif (search_in ==  'all'):
-                ## else search all records - as before
-                                
-                ## perform the first query:        
-                table = tables.pop()        
-                where = wheres.pop()
-                where_is = where_iss.pop()
                 
-                phenotype = Phenotype.objects.get(id=where)
-                phenotype_type = phenotype.phenotype_type.phenotype_type
-                            
-                if phenotype_type != 'Affection Status':
-                    querystr = querystrs.pop().strip()
-                else:
-                    querystr = ''
-                    
-                query_results = query_db(table, where, where_is, querystr)
-        
-                ## record the query to print on the results page
-        
-                query_summary = ["FROM " + table + " WHERE " + Phenotype.objects.get(id=where).phenotype_name + " " + where_is + " " + querystr]
-        
-                ## if there are more queries then perform them on the ids returned from the first query
-                while len(tables) > 0:
-                    table = tables.pop()
-                    where = wheres.pop()
-                    where_is = where_iss.pop()
-                    
-                    phenotype = Phenotype.objects.get(id=where)
-                    phenotype_type = phenotype.phenotype_type.phenotype_type
-                            
-                    if phenotype_type != 'Affection Status':
-                        querystr = querystrs.pop().strip()
-                    else:
-                        querystr = ''
-                                        
-                    if len(query_results) > 0:
-                        query_results = query_db_with_ids(table, where, where_is, querystr, query_results)
-                        query_summary.append("+ FROM " + table + " WHERE " + Phenotype.objects.get(id=where).phenotype_name + " " + where_is + " " + querystr)
-                    else: 
-                        message = "Sorry your query didn't return any results, please try another query."
-                        return render(request, 'search/querybuilder.html', {'phenotypes':Phenotype.objects.all(),'message':message})
-
+                query_results = perform_queries(request, tables, wheres, where_iss, querystrs)
+                query_ids = query_results[0]
+                query_summary = query_results[1] 
+                
                 ## no more queries so return the data if there is any
-                
-                if len(query_results) > 0:
+                if len(query_ids) > 0:
                     
-                    paginator = parse_query_results(query_results, results_per_page)
-                        
+                    query_ids_objs = parse_query_results(query_ids)
+                    
+                    paginator = Paginator(query_ids_objs, results_per_page)
+                    
                     page = request.GET.get('page')
                     try:
                         page_results = paginator.page(page)
@@ -317,24 +267,11 @@ def querybuilder(request):
                         # If page is out of range (e.g. 9999), deliver last page of results.
                         page_results = paginator.page(paginator.num_pages)
                     
-                    ## up to this point we just have individual ids
-                    ## get the results that user wants
-                    parsed_results = []
-                    for indId in page_results:
-                        for column in output:
-                            if column == 'IndId':
-                                ## get the individual identifier string
-                                indStr = IndividualIdentifier.objects.filter(individual_id = indId['identifier']).values_list('individual_string')
-                                ## if there are more than 1 id then join the strings
-                                ##Êadd string to a dict with a column title
-                                
-                                print str(indId) + " " + str(indStr)
-                    
-                                    
-                    table = QueryTable(page_results)            
+                    table_html = generate_query_results_table(output, get_output_data(page_results, output))
                     query_time = time() - start_time
-                    return render(request, 'search/queryresults.html', {'table': table, 
-                                                                        'count':len(query_results),
+                    return render(request, 'search/queryresults.html', {'tablehtml': table_html,
+                                                                        'output_str': output_string, 
+                                                                        'count':len(query_ids),
                                                                         'querytime':query_time, 
                                                                         'page_results':page_results,                                                                         
                                                                         'tables_str':tables_string, 
@@ -353,47 +290,34 @@ def querybuilder(request):
         # pass all the phenotypes/platforms/studies etc to the form                 
         return render(request, 'search/querybuilder.html', {'phenotypes':Phenotype.objects.all()})
         
-def querypage(request, page, results_per_page, tables_str, where_str, whereis_str, querystr_str):
+def querypage(request, page, results_per_page, tables_str, where_str, whereis_str, querystr_str, output_str):
     start_time = time()
     ## split the strings containing multiple values
-    table_list = tables_str.split("_")
-    where_list = where_str.split("_")
-    whereis_list = whereis_str.split("_")
-    querystr_list = querystr_str.split("_")
+    tables = tables_str.split("_")
+    wheres = where_str.split("_")
+    where_iss = whereis_str.split("_")
+    querystrs = querystr_str.split("_")
+    output = output_str.split("_")
     
-    ## perform the first query:        
-    table = table_list.pop()        
-    where = where_list.pop()
-    where_is = whereis_list.pop()
-    querystr = querystr_list.pop().strip()
-    query_results = query_db(table, where, where_is, querystr)
-    
-    ## record the query to print on the results page
-    query_summary = ["FROM " + table + " WHERE " + Phenotype.objects.get(id=where).phenotype_name + " " + where_is + " " + querystr]
-        
-    ## if there are more queries then perform them on the ids returned from the first query
-    while len(table_list) > 0:
-        table = table_list.pop()        
-        where = where_list.pop()
-        where_is = whereis_list.pop()
-        querystr = querystr_list.pop().strip()
-        query_results = query_db_with_ids(table, where, where_is, querystr, query_results)        
+    query_results = perform_queries(request, tables, wheres, where_iss, querystrs)
+    query_ids = query_results[0]
+    query_summary = query_results[1]
 
-        query_summary.append("+ FROM " + table + " WHERE " + Phenotype.objects.get(id=where).phenotype_name + " " + where_is + " " + querystr)
-
-    paginator = parse_query_results(query_results, results_per_page)
+    query_ids_objs = parse_query_results(query_ids)
+    paginator = Paginator(query_ids_objs, results_per_page)
     
     try:
         page_results = paginator.page(page)
     except EmptyPage:
         page_results = paginator.page(paginator.num_pages)
             
-    table = QueryTable(page_results)
+    table_html = generate_query_results_table(output, get_output_data(page_results, output))
             
     query_time = time() - start_time
     
-    return render(request, 'search/queryresults.html', {'table': table, 
-                                                        'count':len(query_results),
+    return render(request, 'search/queryresults.html', {'tablehtml': table_html, 
+                                                        'output_str': output_str,
+                                                        'count':len(query_ids),
                                                         'querytime':query_time, 
                                                         'page_results':page_results,                                                         
                                                         'tables_str':tables_str, 
@@ -403,34 +327,25 @@ def querypage(request, page, results_per_page, tables_str, where_str, whereis_st
                                                         'query_summary':query_summary,
                                                         'results_per_page':results_per_page})
     
-def query_export(request, select, tables_str, where_str, whereis_str, querystr_str):
+def query_export(request, tables_str, where_str, whereis_str, querystr_str, output_str):
     ## split the strings containing multiple values
-    table_list = tables_str.split("_")
-    where_list = where_str.split("_")
-    whereis_list = whereis_str.split("_")
-    querystr_list = querystr_str.split("_")
+    tables = tables_str.split("_")
+    wheres = where_str.split("_")
+    where_iss = whereis_str.split("_")
+    querystrs = querystr_str.split("_")
+    output = output_str.split("_")
     
-    ## perform the first query:        
-    table = table_list.pop()        
-    where = where_list.pop()
-    where_is = whereis_list.pop()
-    querystr = querystr_list.pop().strip()
-    query_results = query_db(select, table, where, where_is, querystr)
+    query_results = perform_queries(request, tables, wheres, where_iss, querystrs)
+    query_ids = query_results[0]
+    query_ids_objs = parse_query_results(query_ids)
+    parsed_results = get_output_data(query_ids_objs, output)
         
-    ## if there are more queries then perform them on the ids returned from the first query
-    while len(table_list) > 0:
-        table = table_list.pop()        
-        where = where_list.pop()
-        where_is = whereis_list.pop()
-        querystr = querystr_list.pop().strip()
-        query_results = query_db_with_ids(select, table, where, where_is, querystr, query_results)        
-    
     response = HttpResponse(mimetype='text/csv')
-    response['Content-Disposition'] = 'attachment; filename="somefilename.csv"'
+    response['Content-Disposition'] = 'attachment; filename="export.csv"'
     
     writer = csv.writer(response)
 
-    for e in query_results:
+    for e in parsed_results:
         writer.writerow(e)    
     
     return response
@@ -554,14 +469,13 @@ def query_db_with_ids(table, where, where_is, querystr, last_query):
         print "ERROR: Search table not currently supported"
         return None
 
-def parse_query_results(query_results, results_per_page):
+def parse_query_results(query_results):
     
     ## query results is a list of individual ids tuples
     ## from the intersection of all queries
     query_result_ids = []
     for e in query_results:
         query_result_ids.append(e[0])
-#        query_result_ids.append({'identifier': e[0]})                
             
     ## get a dict of all the ids and their objects
     bulk_query_results = Individual.objects.in_bulk(query_result_ids)
@@ -573,4 +487,115 @@ def parse_query_results(query_results, results_per_page):
         ## enter a link to an individual view
         query_result_objs.append({'identifier':ind.id})
             
-    return Paginator(query_result_objs, results_per_page)
+    return query_result_objs
+
+def get_output_data(page_results, output_columns):
+    
+    ## page_results is a list of individual ids tuples
+    ## from the intersection of all queries
+    ## get the result columns that user wants
+    parsed_results = []
+    for indId in page_results:
+        row_values = []
+        for column in output_columns:
+            if column == 'IndividualID':                
+                indStr = IndividualIdentifier.objects.filter(individual_id = indId['identifier']).values('individual_string')                            
+                ## if there are more than 1 id then join the strings
+                row_values.append(indStr[0]['individual_string'])
+            elif column == 'Source':
+                indObject = IndividualIdentifier.objects.filter(individual_id = indId['identifier'])
+                source = indObject[0].source.source_name                                
+                row_values.append(source)
+            elif column == 'Sex':
+                indObject = IndividualIdentifier.objects.filter(individual_id = indId['identifier'])
+                sex = indObject[0].individual.sex
+                if (sex == 1):
+                    row_values.append("Male")
+                elif (sex == 2):
+                    row_values.append("Female")
+                else:
+                    row_values.append("Unkown")
+            elif column == 'SampleIDs':
+                sampleId = Sample.objects.filter(individual_id = indId['identifier']).values('sample_id')
+                if len(sampleId) > 0:
+                    row_values.append(sampleId[0]['sample_id'])
+#            elif column == 'Study':
+#                studysample = StudySamples.objects.filter(individual_id = indId['identifier'])
+#                
+#                for study in studysample:
+#                    row_values.append(study.study.study_name)
+#            elif column == 'Platform':
+#                
+#            elif column == 'QC': 
+            
+        parsed_results.append(row_values)
+    
+    return parsed_results
+    
+def perform_queries(request, tables, wheres, where_iss, querystrs):
+    ## perform the first query:        
+    table = tables.pop()        
+    where = wheres.pop()
+    where_is = where_iss.pop()                
+                
+    phenotype = Phenotype.objects.get(id=where)
+    phenotype_type = phenotype.phenotype_type.phenotype_type
+                                            
+    if phenotype_type == 'Affection Status':
+        querystr = ''
+    else:
+        querystr = querystrs.pop().strip()
+                    
+    query_results = query_db(table, where, where_is, querystr)
+    
+    print query_results
+                
+    query_summary = ["FROM " + table + " WHERE " + Phenotype.objects.get(id=where).phenotype_name + " " + where_is + " " + querystr]
+        
+    ## if there are more queries then perform them on the ids returned from the first query
+    while len(tables) > 0:
+        table = tables.pop()
+        where = wheres.pop()
+        where_is = where_iss.pop()
+                    
+        phenotype = Phenotype.objects.get(id=where)
+        phenotype_type = phenotype.phenotype_type.phenotype_type
+                            
+        if phenotype_type != 'Affection Status':
+            querystr = querystrs.pop().strip()
+        else:
+            querystr = ''
+                                        
+        if len(query_results) > 0:
+            query_results = query_db_with_ids(table, where, where_is, querystr, query_results)
+            query_summary.append("+ FROM " + table + " WHERE " + Phenotype.objects.get(id=where).phenotype_name + " " + where_is + " " + querystr)
+        else: 
+            message = "Sorry your query didn't return any results, please try another query."
+            return render(request, 'search/querybuilder.html', {'phenotypes':Phenotype.objects.all(),'message':message})
+    return query_results, query_summary
+
+def perform_queries_with_ids(request, tables, wheres, where_iss, querystrs, query_results):
+    
+    query_summary = []
+    
+    while len(tables) > 0:
+        table = tables.pop()
+        where = wheres.pop()
+        where_is = where_iss.pop()
+                    
+        phenotype = Phenotype.objects.get(id=where)
+        phenotype_type = phenotype.phenotype_type.phenotype_type
+                            
+        if phenotype_type != 'Affection Status':
+            querystr = querystrs.pop().strip()
+        else:
+            querystr = ''
+                                        
+        if len(query_results) > 0:
+            query_results = query_db_with_ids(table, where, where_is, querystr, query_results)
+            query_summary.append("+ FROM " + table + " WHERE " + Phenotype.objects.get(id=where).phenotype_name + " " + where_is + " " + querystr)
+        else: 
+            message = "Sorry your query didn't return any results, please try another query."
+            return render(request, 'search/querybuilder.html', {'phenotypes':Phenotype.objects.all(),'message':message})
+    return query_results, query_summary
+                    
