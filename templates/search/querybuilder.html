@@ -5,7 +5,9 @@
 <script src="//netdna.bootstrapcdn.com/twitter-bootstrap/2.2.2/js/bootstrap.min.js"></script>
 
 <script type="text/javascript">
+	
 	$(document).ready(function() {
+		
 		$('#btnAdd').click(function() {
 			var num = $('.clonedInput').length;
 			// how many "duplicatable" input fields we currently have
@@ -162,7 +164,7 @@
 {% endblock %}
 
 {% block content %}
-<p class="lead">
+<p class="lead" style="margin-top: 10px;margin-bottom: 10px">
 	Build a query:
 </p>
 {% if message %}
@@ -198,9 +200,45 @@
 		</div>
 	</div>
 
-	<p class="lead" style="margin-top: 20px;margin-bottom: 10px">
-		Search in:
-	</p>
+	<p class="lead" style="margin-top: 30px;margin-bottom: 10px">Select output columns:</p>
+	<div class="row" style="margin-top: 10px;margin-bottom: 10px">
+		<div class="span9">
+			<div class="accordion" id="accordion1">
+				<div class="accordion-group">
+					<div class="accordion-heading">
+						<a class="accordion-toggle" data-toggle="collapse" data-target="#collapseOne" href="#"> Individual details </a>
+					</div>
+					<div id="collapseOne" class="accordion-body collapse in">
+						<div class="accordion-inner">
+							<label class="checkbox inline"><input type="checkbox" name="output" value="IndividualID">Individual ID</label>
+							<label class="checkbox inline"><input type="checkbox" name="output" value="Source">Source</label>
+							<label class="checkbox inline"><input type="checkbox" name="output" value="Sex">Sex</label>
+						</div>
+					</div>
+					<div class="accordion-heading">
+						<a class="accordion-toggle" data-toggle="collapse" data-target="#collapseTwo" href="#"> Sample details </a>
+					</div>
+					<div id="collapseTwo" class="accordion-body collapse in">
+						<div class="accordion-inner">
+							<label class="checkbox inline"><input type="checkbox" name="output" value="SampleIDs">Sample IDs</label>
+							<label class="checkbox inline"><input type="checkbox" name="output" value="Studies">Studies</label>
+							<label class="checkbox inline"><input type="checkbox" name="output" value="Platforms">Platforms</label>
+							<label class="checkbox inline"><input type="checkbox" name="output" value="QCs">Sample QCs</label>
+						</div>
+					</div>
+					<div class="accordion-heading">
+						<a class="accordion-toggle" data-toggle="collapse" data-target="#collapseThree" href="#"> Phenotype values </a>
+					</div>
+					<div id="collapseThree" class="accordion-body collapse in">
+						<div class="accordion-inner">
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<p class="lead" style="margin-top: 30px;margin-bottom: 10px">Search in:</p>
 	<div class="row" style="margin-top: 10px;margin-bottom: 10px">
 		<div class="span9">
 			<label class="radio">
@@ -226,29 +264,7 @@
 		</div>
 	</div>
 
-	<p class="lead" style="margin-top: 20px;margin-bottom: 10px">
-		Output:
-	</p>
-	<div class="row" style="margin-top: 10px;margin-bottom: 10px">
-		<div class="span6">
-			<div class="accordion" id="accordion2">
-				<div class="accordion-group">
-					<div class="accordion-heading">
-						<a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion2" href="#collapseOne"> Individual details </a>
-					</div>
-					<div id="collapseOne" class="accordion-body collapse in">
-						<div class="accordion-inner">
-							<label class="checkbox inline"><input type="checkbox" name="output" value="IndId">Individual ID</label>
-							<label class="checkbox inline"><input type="checkbox" name="output" value="source">Source</label>
-							<label class="checkbox inline"><input type="checkbox" name="output" value="sex">Sex</label>
-						</div>
-					</div>
-				</div>
-			</div>
-		</div>
-	</div>
-
-	<div class = row style="margin-top: 10px;margin-bottom: 10px">
+	<div class = row style="margin-top: 30px;margin-bottom: 10px">
 		<div class="span9">
 			<input type="submit" value="Search" class="btn btn-large btn-primary"/>
 		</div>

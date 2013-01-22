@@ -10,9 +10,9 @@
  		if (perpage != 'message') {
 		  var url = "";
 		  if (perpage == 'all') {
-		  	url = "/search/querybuilder" + '/1/{{page_results.paginator.count}}/{{select}}/{{tables_str}}/{{where_str}}/{{whereis_str}}/{{querystr_str}}/';
+		  	url = "/search/querybuilder" + '/1/{{page_results.paginator.count}}/{{tables_str}}/{{where_str}}/{{whereis_str}}/{{output_str}}/{{querystr_str}}/';
 		  } else {
-		  	url = "/search/querybuilder" + '/{{page_results.number}}/' + perpage + '/{{select}}/{{tables_str}}/{{where_str}}/{{whereis_str}}/{{querystr_str}}/';
+		  	url = "/search/querybuilder" + '/{{page_results.number}}/' + perpage + '/{{tables_str}}/{{where_str}}/{{whereis_str}}/{{output_str}}/{{querystr_str}}/';
 		  }
 		  window.location.href = url;
 		} 								
@@ -41,23 +41,22 @@
   </select>
 </div>
   
-  {% load render_table from django_tables2 %}
-  {% render_table table %}
+  {{tablehtml|safe}}
 
 <div>
-  <a href={% url search-exportcsv tables_str where_str whereis_str querystr_str %}><i class="icon-file"></i><em>export to .csv</em></a>
+  <a href={% url search-exportcsv tables_str where_str whereis_str output_str querystr_str %}><i class="icon-file"></i><em>export to .csv</em></a>
 </div>
 
 <div class="pagination pagination-centered">
   <ul>
     {% if page_results.has_previous %}
-      <li><a href={% url search-querypage page_results.previous_page_number results_per_page tables_str where_str whereis_str querystr_str %}>previous</a></li>
+      <li><a href={% url search-querypage page_results.previous_page_number results_per_page tables_str where_str whereis_str output_str querystr_str %}>previous</a></li>
     {% else %}
       <li class="active"><a href="?page={{ page_results.previous_page_number }}">previous</a></li>
     {% endif %}
     <li class="active"><a href="#">{{ page_results.number }}</a></li>
     {% if page_results.has_next %}
-      <li><a href={% url search-querypage page_results.next_page_number results_per_page tables_str where_str whereis_str querystr_str %}>next</a></li>
+      <li><a href={% url search-querypage page_results.next_page_number results_per_page tables_str where_str whereis_str output_str querystr_str %}>next</a></li>
     {% else %}
       <li class="active"><a href="/search/querybuilder/?page={{ page_results.next_page_number }}">next</a></li>
     {% endif %}
