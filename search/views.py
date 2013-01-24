@@ -123,19 +123,20 @@ def all_search_options(request, menuid):
     return HttpResponse(json.dumps(menuitems), mimetype="application/javascript")
 
 def generate_query_results_table(output, query_results):
-    
     table_html = "<table class=\"table table-striped table-bordered\">\n"
-    
     for column in output:
-        table_html = "".join((table_html, "<th>"+ column +"</th>\n"))
-
+        
+        ## if the column is a phenotype then get the phenotype name from the id
+        if str(column).startswith("phenotype"):               
+            phenotype_id = column.split(":")[1] 
+            phenotype = Phenotype.objects.get(id=phenotype_id)            
+            table_html = "".join((table_html, "<th>"+ phenotype.phenotype_name +"</th>\n"))
+        else:
+            table_html = "".join((table_html, "<th>"+ column +"</th>\n"))
     for results_row in query_results:
-
         table_html = "".join((table_html, "<tr>\n"))
-
         for value in results_row:
             table_html = "".join((table_html, "<td>" + value + "</td>\n"))
-
         table_html = "".join((table_html, "</tr>\n"))
 
     return "".join((table_html, "</table>\n"))
@@ -151,8 +152,15 @@ def querybuilder(request):
         search_in = request.POST['searchIn']        
         output    = request.POST.getlist('output')
         
-        ## check that all the queries contain something for each required field (each element of each list is true)
-        if (all(where_iss) & all(wheres) & all(tables)):
+        ## check that all the queries contain something for each required field 
+        if len(where_iss) == 0 | all(where_iss) is False | len(wheres) == 0 | all(wheres) is False | len(tables) == 0 | all(tables) is False:
+            message = "Query form contains missing information, please complete all fields and try again."
+            return render(request, 'search/querybuilder.html', {'phenotypes':Phenotype.objects.all(),'message':message})
+        ## check that each of the required input fields contains data
+        elif len(output) == 0:
+            message = "No output columns selected, please select output columns and try again."
+            return render(request, 'search/querybuilder.html', {'phenotypes':Phenotype.objects.all(),'message':message})
+        else:
             tables_string    = "_".join(tables)
             wheres_string    = "_".join(wheres)
             where_iss_string = "_".join(where_iss)
@@ -161,9 +169,7 @@ def querybuilder(request):
             
             ## search all records or from a list of individuals
             if (search_in == 'userlist'):
-                
-                query_ids = []
-                
+                query_ids = []                
                 if (request.POST['individual_list']):
                     textarea_values = request.POST['individual_list'].splitlines()
                     for line in textarea_values:
@@ -192,13 +198,9 @@ def querybuilder(request):
                                                         
                     if (len(db_ids) > 0):
                         
-                        print len(db_ids)
-                        
                         results = perform_queries_with_ids(request, tables, wheres, where_iss, querystrs, db_ids)
                         result_ids = results[0]
                         query_summary = results[1]
-                        
-                        print len(result_ids)
                         
                         ## no more queries so return the data if there is any
                         if len(result_ids) > 0:
@@ -283,9 +285,6 @@ def querybuilder(request):
                 else:
                     message = "Sorry your query didn't return any results, please try another query."
                     return render(request, 'search/querybuilder.html', {'phenotypes':Phenotype.objects.all(),'message':message})
-        else:
-            message = "Query form contains missing information, please complete all fields and try again."
-            return render(request, 'search/querybuilder.html', {'phenotypes':Phenotype.objects.all(),'message':message})
     else:
         # pass all the phenotypes/platforms/studies etc to the form                 
         return render(request, 'search/querybuilder.html', {'phenotypes':Phenotype.objects.all()})
@@ -356,7 +355,6 @@ def query_db (table, where, where_is, querystr):
         ## get the phenotype object
         phenotype = Phenotype.objects.get(id=where)            
         if phenotype.phenotype_type.phenotype_type == 'Affection Status':
-            ## the user should only be offered the equals option for this type of phenotype
             if where_is == 'true':
                 return AffectionStatusPhenotypeValue.objects.filter(phenotype__exact=phenotype.id, phenotype_value__exact=1).values_list('individual_id')
             elif where_is == 'false':
@@ -495,39 +493,75 @@ def get_output_data(page_results, output_columns):
     ## from the intersection of all queries
     ## get the result columns that user wants
     parsed_results = []
-    for indId in page_results:
+    for ind_tuple in page_results:
+        ind_id = ind_tuple['identifier']
         row_values = []
         for column in output_columns:
             if column == 'IndividualID':                
-                indStr = IndividualIdentifier.objects.filter(individual_id = indId['identifier']).values('individual_string')                            
+                ind_strings = IndividualIdentifier.objects.filter(individual_id = ind_id).values('individual_string')                            
                 ## if there are more than 1 id then join the strings
-                row_values.append(indStr[0]['individual_string'])
+                identifier_string = ""
+                for i in ind_strings:                    
+                    identifier_string = " ".join((i['individual_string'], identifier_string))
+                row_values.append(identifier_string)                
             elif column == 'Source':
-                indObject = IndividualIdentifier.objects.filter(individual_id = indId['identifier'])
-                source = indObject[0].source.source_name                                
-                row_values.append(source)
+                ind_objects = IndividualIdentifier.objects.filter(individual_id = ind_id)
+                source_string = ""
+                for i in ind_objects:
+                    source_string = " ".join((i.source.source_name, source_string))
+                row_values.append(source_string)
             elif column == 'Sex':
-                indObject = IndividualIdentifier.objects.filter(individual_id = indId['identifier'])
-                sex = indObject[0].individual.sex
-                if (sex == 1):
+                indObject = Individual.objects.get(id = ind_id)
+                if (indObject.sex == 1):
                     row_values.append("Male")
-                elif (sex == 2):
+                elif (indObject.sex == 2):
                     row_values.append("Female")
                 else:
                     row_values.append("Unkown")
             elif column == 'SampleIDs':
-                sampleId = Sample.objects.filter(individual_id = indId['identifier']).values('sample_id')
-                if len(sampleId) > 0:
-                    row_values.append(sampleId[0]['sample_id'])
-#            elif column == 'Study':
-#                studysample = StudySamples.objects.filter(individual_id = indId['identifier'])
-#                
-#                for study in studysample:
-#                    row_values.append(study.study.study_name)
-#            elif column == 'Platform':
-#                
+                sample_ids = Sample.objects.filter(individual_id = ind_id).values('sample_id')
+                sample_string = ""
+                for s in sample_ids:
+                    sample_string = " ".join((s['sample_id'], sample_string))    
+                row_values.append(sample_string)                
+            elif column == 'Study':
+                samples = Sample.objects.filter(individual_id = ind_id)
+                study_string = ""
+                for s in samples:
+                    study_string = " ".join((s.studysample.study.study_name, study_string))    
+                row_values.append(study_string)
+            elif column == 'Platform':
+                samples = Sample.objects.filter(individual_id = ind_id)
+                platform_string = ""
+                for s in samples:
+                    platform_string = " ".join((s.studysample.study.platform.platform_name, platform_string))    
+                row_values.append(study_string)
 #            elif column == 'QC': 
-            
+            elif str(column).startswith("phenotype"):               
+                phenotype_id = column.split(":")[1] 
+                phenotype = Phenotype.objects.get(id=phenotype_id)            
+                
+                if phenotype.phenotype_type.phenotype_type == 'Affection Status':                    
+                    try:
+                        affectionstatus = AffectionStatusPhenotypeValue.objects.get(phenotype__exact=phenotype.id, individual_id=ind_id)
+                        value = str(affectionstatus.phenotype_value)
+                    except AffectionStatusPhenotypeValue.DoesNotExist:
+                        value = "-"                                
+                elif phenotype.phenotype_type.phenotype_type == 'Qualitative':            
+                    try:
+                        qualitative = QualitativePhenotypeValue.objects.get(phenotype__exact=phenotype.id, individual_id=ind_id)
+                        value = str(qualitative.phenotype_value)
+                    except QualitativePhenotypeValue.DoesNotExist:
+                        value = "-"            
+                elif phenotype.phenotype_type.phenotype_type == 'Quantitative':
+                    try:
+                        quantitiatve = QuantitiatvePhenotypeValue.objects.get(phenotype__exact=phenotype.id, individual_id=ind_id)
+                        value = str(quantitiatve.phenotype_value)
+                    except QuantitiatvePhenotypeValue.DoesNotExist:
+                        value = "-"            
+                
+                row_values.append(value)
+        
         parsed_results.append(row_values)
     
     return parsed_results
@@ -547,8 +581,6 @@ def perform_queries(request, tables, wheres, where_iss, querystrs):
         querystr = querystrs.pop().strip()
                     
     query_results = query_db(table, where, where_is, querystr)
-    
-    print query_results
                 
     query_summary = ["FROM " + table + " WHERE " + Phenotype.objects.get(id=where).phenotype_name + " " + where_is + " " + querystr]
         
