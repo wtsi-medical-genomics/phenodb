@@ -8,6 +8,16 @@
 	
 	$(document).ready(function() {
 		
+		//var checkboxCell    = $("#collapseThree");
+		//if (checkboxCell.length) {
+		//	var phenotypes = "{{phenotypes}}";
+		//	
+		//	for (var i = 0; i < phenotypes.length; i++) {								
+		//		checkboxCell.append ('<label><input type="checkbox" class="checkbox inline" name="output" value="1"/>My checkbox</label>');	
+		//	}    		
+		//}
+
+		
 		$('#btnAdd').click(function() {
 			var num = $('.clonedInput').length;
 			// how many "duplicatable" input fields we currently have
@@ -164,15 +174,14 @@
 {% endblock %}
 
 {% block content %}
-<p class="lead" style="margin-top: 10px;margin-bottom: 10px">
-	Build a query:
-</p>
-{% if message %}
-<p class="text-error">
-	<em>{{message}}</em>
-</p>
-{% endif %}
-<form class="form-inline" action="" method="post" enctype="multipart/form-data">
+
+	{% if message %}
+		<p class="text-error">{{message}}</p>
+	{% endif %}
+	
+	<p class="lead" style="margin-top: 10px;margin-bottom: 10px">Build a query:</p>
+
+	<form class="form-inline" action="" method="post" enctype="multipart/form-data">
 
 	{% csrf_token %}
 
@@ -192,7 +201,7 @@
 			</div>
 		</div>
 	</div>
-
+	
 	<div class = row style="margin-top: 10px;margin-bottom: 10px">
 		<div class="span9">
 			<input type="button" id="btnAdd" value="add another filter" class="btn btn-default btn-success" />
@@ -202,7 +211,7 @@
 
 	<p class="lead" style="margin-top: 30px;margin-bottom: 10px">Select output columns:</p>
 	<div class="row" style="margin-top: 10px;margin-bottom: 10px">
-		<div class="span9">
+		<div class="span6">
 			<div class="accordion" id="accordion1">
 				<div class="accordion-group">
 					<div class="accordion-heading">
@@ -210,7 +219,7 @@
 					</div>
 					<div id="collapseOne" class="accordion-body collapse in">
 						<div class="accordion-inner">
-							<label class="checkbox inline"><input type="checkbox" name="output" value="IndividualID">Individual ID</label>
+							<label class="checkbox inline"><input type="checkbox" name="output" value="IndividualID" checked>Individual ID</label>
 							<label class="checkbox inline"><input type="checkbox" name="output" value="Source">Source</label>
 							<label class="checkbox inline"><input type="checkbox" name="output" value="Sex">Sex</label>
 						</div>
@@ -218,7 +227,7 @@
 					<div class="accordion-heading">
 						<a class="accordion-toggle" data-toggle="collapse" data-target="#collapseTwo" href="#"> Sample details </a>
 					</div>
-					<div id="collapseTwo" class="accordion-body collapse in">
+					<div id="collapseTwo" class="accordion-body collapse out">
 						<div class="accordion-inner">
 							<label class="checkbox inline"><input type="checkbox" name="output" value="SampleIDs">Sample IDs</label>
 							<label class="checkbox inline"><input type="checkbox" name="output" value="Studies">Studies</label>
@@ -229,8 +238,11 @@
 					<div class="accordion-heading">
 						<a class="accordion-toggle" data-toggle="collapse" data-target="#collapseThree" href="#"> Phenotype values </a>
 					</div>
-					<div id="collapseThree" class="accordion-body collapse in">
-						<div class="accordion-inner">
+					<div id="collapseThree" class="accordion-body collapse out">
+						<div class="accordion-inner">							
+							{% for phenotype in phenotypes %}            					            					
+            					<label class="checkbox"><input type="checkbox" name="output" value="phenotype:{{phenotype.id}}">{{phenotype.phenotype_name}}</label><br/>
+    						{% endfor %}    																			
 						</div>
 					</div>
 				</div>
