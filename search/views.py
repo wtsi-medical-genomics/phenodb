@@ -11,7 +11,6 @@ from django.core import serializers
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 import json
 
-
 class PhenotypeTable(tables.Table):        
     class Meta:
         model = Phenotype
@@ -78,12 +77,22 @@ def showSources(request):
     return render(request, 'search/dataview.html', {'table': table})
 
 def showIndividuals(request):
-    table = IndividualTable(Individual.objects.all())
-    return render(request, 'search/dataview.html', {'table': table})
+    message = "The database currently contains " + str(len(Individual.objects.all())) + " individuals"
+    return render(request, 'search/summary.html', {'message': message})
 
 def showSamples(request):
-    table = SampleTable(Sample.objects.all())
-    return render(request, 'search/dataview.html', {'table': table})
+    message = "The database currently contains " + str(len(Sample.objects.all())) + " samples"
+    
+#    sources = Source.objects.all()
+#    for source in sources
+#        print source.source
+#    ## get the individual totals for each source
+#    ##Êget all the sources
+#    ## for each source get all the inds that match that source id
+#    ## record the number in a dict
+#    ## present this first as a simple table ... then plot
+    
+    return render(request, 'search/summary.html', {'message': message})
 
 def all_json_models(request, menuid):
     if menuid == 'phenotype':
