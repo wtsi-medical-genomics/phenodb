@@ -8,16 +8,6 @@
 	
 	$(document).ready(function() {
 		
-		//var checkboxCell    = $("#collapseThree");
-		//if (checkboxCell.length) {
-		//	var phenotypes = "{{phenotypes}}";
-		//	
-		//	for (var i = 0; i < phenotypes.length; i++) {								
-		//		checkboxCell.append ('<label><input type="checkbox" class="checkbox inline" name="output" value="1"/>My checkbox</label>');	
-		//	}    		
-		//}
-
-		
 		$('#btnAdd').click(function() {
 			var num = $('.clonedInput').length;
 			// how many "duplicatable" input fields we currently have
@@ -198,6 +188,11 @@
 				<select name="where" id="where_12"></select>
 				<select name="is" id="is_12"></select>
 				<input type="text" name="querystr" id="querystr_12" />
+				<!-- <select name="combine" id="combine_12"> -->
+				<!--	<option value="message"></option>        -->
+				<!--	<option value="phenotype">AND</option>   -->
+				<!--	<option value="phenotype">OR</option>    -->
+				<!-- </select> -->
 			</div>
 		</div>
 	</div>
