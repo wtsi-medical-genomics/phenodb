@@ -1,9 +1,6 @@
-from django.template import RequestContext
-from django.shortcuts import render, render_to_response
-from search.models import *
-from django import forms
-import django_tables2 as tables
-from django_tables2 import RequestConfig
+from django.shortcuts import render
+from search.models import IndividualIdentifier, AffectionStatusPhenotypeValue, QualitativePhenotypeValue, QuantitiatvePhenotypeValue, StudySamples
+from search.tables import *
 import csv
 from django.http import HttpResponse
 from time import time
@@ -11,48 +8,7 @@ from django.core import serializers
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 import json
 
-class PhenotypeTable(tables.Table):        
-    class Meta:
-        model = Phenotype
-        fields = ('phenotype_name', 'phenotype_description', 'phenotype_type')
-        attrs = {'class': 'table table-striped table-bordered'}
 
-class PlatformTable(tables.Table):        
-    class Meta:
-        model = Platform
-        fields = ('platform_name', 'platform_type', 'platform_description')
-        attrs = {'class': 'table table-striped table-bordered'}
-
-class StudyTable(tables.Table):        
-    class Meta:
-        model = Study
-        fields = ('study_name', 'study_name', 'data_location', 'study_description')         
-        attrs = {'class': 'table table-striped table-bordered'}
-        
-class QCTable(tables.Table):        
-    class Meta:
-        model = QC
-        fields = ('qc_name', 'qc_description')         
-        attrs = {'class': 'table table-striped table-bordered'}
-        
-class SourceTable(tables.Table):        
-    class Meta:
-        model = Source
-        fields = ('source_name', 'contact_name', 'source_description')         
-        attrs = {'class': 'table table-striped table-bordered'}
-
-class IndividualTable(tables.Table):        
-    class Meta:
-        model = Individual
-        fields = ('id', 'sex')         
-        attrs = {'class': 'table table-striped table-bordered'}
-        
-class SampleTable(tables.Table):        
-    class Meta:
-        model = Sample
-        fields = ('sample_id')         
-        attrs = {'class': 'table table-striped table-bordered'}
-    
 def home(request):
     return render(request, 'search/home.html', {})
 
@@ -77,22 +33,25 @@ def showSources(request):
     return render(request, 'search/dataview.html', {'table': table})
 
 def showIndividuals(request):
-    message = "The database currently contains " + str(len(Individual.objects.all())) + " individuals"
-    return render(request, 'search/summary.html', {'message': message})
+    message = "The database currently contains <strong>" + str(Individual.objects.all().count()) + "</strong> individuals"
+    message += " and <strong>" + str(IndividualIdentifier.objects.all().count()) + "</strong> individual IDs"
+    message += "<br/>Individual IDs by source:"
+    sources = Source.objects.all()
+    source_counts = []
+    for source in sources:
+        source_counts.append({'name':source.source_name,'count':IndividualIdentifier.objects.filter(source_id=source.id).count()})
+    table = CountTable(source_counts)
+    return render(request, 'search/summary.html', {'message': message, 'table': table})
 
 def showSamples(request):
-    message = "The database currently contains " + str(len(Sample.objects.all())) + " samples"
-    
-#    sources = Source.objects.all()
-#    for source in sources
-#        print source.source
-#    ## get the individual totals for each source
-#    ##Êget all the sources
-#    ## for each source get all the inds that match that source id
-#    ## record the number in a dict
-#    ## present this first as a simple table ... then plot
-    
-    return render(request, 'search/summary.html', {'message': message})
+    message = "The database currently contains <strong>" + str(Sample.objects.all().count()) + "</strong> samples"
+    message += "<br/>Samples by study:"
+    studies = Study.objects.all()
+    study_counts = []
+    for study in studies:
+        study_counts.append({'name':study.study_name,'count':StudySamples.objects.filter(study_id=study.id).count()})
+    table = CountTable(study_counts)
+    return render(request, 'search/summary.html', {'message': message, 'table': table})
 
 def all_json_models(request, menuid):
     if menuid == 'phenotype':
