@@ -1,6 +1,6 @@
 from django.shortcuts import render
-from search.models import IndividualIdentifier, AffectionStatusPhenotypeValue, QualitativePhenotypeValue, QuantitiatvePhenotypeValue, StudySamples
-from search.tables import *
+from search.models import IndividualIdentifier, AffectionStatusPhenotypeValue, QualitativePhenotypeValue, QuantitiatvePhenotypeValue, StudySamples, Phenotype, Platform, Individual, Study, Sample, Source, QC
+from search.tables import PhenotypeTable, PlatformTable, StudyTable, QCTable, SourceTable, CountTable
 import csv
 from django.http import HttpResponse
 from time import time
@@ -11,10 +11,6 @@ import json
 
 def home(request):
     return render(request, 'search/home.html', {})
-
-def showPhenotypes(request):
-    table = PhenotypeTable(Phenotype.objects.all())
-    return render(request, 'search/dataview.html', {'table': table})
 
 def showPlatforms(request):
     table = PlatformTable(Platform.objects.all())
@@ -30,6 +26,44 @@ def showQCs(request):
 
 def showSources(request):
     table = SourceTable(Source.objects.all())
+    return render(request, 'search/dataview.html', {'table': table})
+
+def showPhenotypes(request):
+    
+    phenotypes = Phenotype.objects.all()
+    phenotype_values = []
+    
+    for phenotype in phenotypes:
+        if phenotype.phenotype_type.phenotype_type == 'Affection Status':
+            values_dict_array = AffectionStatusPhenotypeValue.objects.filter(phenotype_id=phenotype.id).order_by('phenotype_value').values('phenotype_value').distinct()            
+            values_list = []
+            for value_dict in values_dict_array:
+                values_list.append(str(value_dict['phenotype_value']))
+            values_str = ", ".join(values_list)
+            not_null_total = AffectionStatusPhenotypeValue.objects.filter(phenotype_id=phenotype.id, phenotype_value__isnull=False).values('phenotype_value').count()
+        elif phenotype.phenotype_type.phenotype_type == 'Qualitative':
+            values_dict_array = QualitativePhenotypeValue.objects.filter(phenotype_id=phenotype.id).values('phenotype_value').distinct()
+            values_list = []
+            for value_dict in values_dict_array:
+                values_list.append(str(value_dict['phenotype_value']))
+            values_str = ", ".join(values_list)
+            not_null_total = QualitativePhenotypeValue.objects.filter(phenotype_id=phenotype.id, phenotype_value__isnull=False).values('phenotype_value').count()
+        elif phenotype.phenotype_type.phenotype_type == 'Quantitative':
+            values_dict_array = QuantitiatvePhenotypeValue.objects.filter(phenotype_id=phenotype.id).order_by('phenotype_value').values('phenotype_value').distinct()
+            values_list = []
+            for value_dict in values_dict_array:
+                values_list.append(value_dict['phenotype_value'])
+                
+            print values_list
+            if len(values_list) > 0:
+                values_str = "...".join((str(min(values_list)), str(max(values_list))))
+            else:
+                values_list = "" 
+            not_null_total = QuantitiatvePhenotypeValue.objects.filter(phenotype_id=phenotype.id, phenotype_value__isnull=False).values('phenotype_value').count()
+        
+        phenotype_values.append({'name':phenotype.phenotype_name, 'description':phenotype.phenotype_description, 'currently_held_values':values_str, 'not_null_total': not_null_total})
+    
+    table = PhenotypeTable(phenotype_values)
     return render(request, 'search/dataview.html', {'table': table})
 
 def showIndividuals(request):
@@ -69,25 +103,11 @@ def all_search_options(request, menuid):
     phenotype = Phenotype.objects.get(id=menuid)            
     menuitems = []
     if phenotype.phenotype_type.phenotype_type == 'Affection Status':
-        menuitems.append({"value": "true", "text": "True" })
-        menuitems.append({"value": "false", "text": "False"})
-        menuitems.append({"value": "isnull", "text": "Is NULL"})
-        menuitems.append({"value": "notnull", "text": "Is not NULL"})
+        menuitems = [{"value": "true", "text": "True" },{"value": "false", "text": "False"},{"value": "isnull", "text": "Is NULL"},{"value": "notnull", "text": "Is not NULL"}]
     elif phenotype.phenotype_type.phenotype_type == 'Qualitative':        
-        menuitems.append({"value": "eq", "text": "Equals" })
-        menuitems.append({"value": "contains", "text": "Contains" })
-        menuitems.append({"value": "starts_with", "text": "Starts with" })
-        menuitems.append({"value": "ends_with", "text": "Ends with" })
-        menuitems.append({"value": "isnull", "text": "Is NULL"})
-        menuitems.append({"value": "notnull", "text": "Is not NULL"})        
+        menuitems = [{"value": "eq", "text": "Equals" },{"value": "contains", "text": "Contains" },{"value": "starts_with", "text": "Starts with" },{"value": "ends_with", "text": "Ends with" },{"value": "isnull", "text": "Is NULL"},{"value": "notnull", "text": "Is not NULL"}]        
     elif phenotype.phenotype_type.phenotype_type == 'Quantitative':        
-        menuitems.append({"value": "eq", "text": "==" })
-        menuitems.append({"value": "gt", "text": ">" })
-        menuitems.append({"value": "gte", "text": ">=" })
-        menuitems.append({"value": "lt", "text": "<" })
-        menuitems.append({"value": "lte", "text": "<=" })
-        menuitems.append({"value": "isnull", "text": "Is NULL"})
-        menuitems.append({"value": "notnull", "text": "Is not NULL"})
+        menuitems = [{"value": "eq", "text": "==" },{"value": "gt", "text": ">" },{"value": "gte", "text": ">=" },{"value": "lt", "text": "<" },{"value": "lte", "text": "<=" },{"value": "isnull", "text": "Is NULL"},{"value": "notnull", "text": "Is not NULL"}]        
     return HttpResponse(json.dumps(menuitems), mimetype="application/javascript")
 
 def generate_query_results_table(output, query_results):
@@ -117,6 +137,7 @@ def querybuilder(request):
         wheres    = request.POST.getlist('where')
         where_iss = request.POST.getlist('is')
         querystrs = request.POST.getlist('querystr')        
+        
         search_in = request.POST['searchIn']        
         output    = request.POST.getlist('output')
         
@@ -217,6 +238,9 @@ def querybuilder(request):
             elif (search_in ==  'all'):
                 
                 query_results = perform_queries(request, tables, wheres, where_iss, querystrs)
+                
+                
+                
                 query_ids = query_results[0]
                 query_summary = query_results[1] 
                 
