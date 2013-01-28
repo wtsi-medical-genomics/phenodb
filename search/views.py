@@ -53,8 +53,6 @@ def showPhenotypes(request):
             values_list = []
             for value_dict in values_dict_array:
                 values_list.append(value_dict['phenotype_value'])
-                
-            print values_list
             if len(values_list) > 0:
                 values_str = "...".join((str(min(values_list)), str(max(values_list))))
             else:
