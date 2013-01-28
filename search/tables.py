@@ -1,11 +1,5 @@
 import django_tables2 as tables
-from search.models import Phenotype, Platform, Study, QC, Source, Individual, Sample
-
-class PhenotypeTable(tables.Table):        
-    class Meta:
-        model = Phenotype
-        fields = ('phenotype_name', 'phenotype_description', 'phenotype_type')
-        attrs = {'class': 'table table-striped table-bordered'}
+from search.models import Platform, Study, QC, Source, Individual, Sample
 
 class PlatformTable(tables.Table):        
     class Meta:
@@ -49,3 +43,12 @@ class CountTable(tables.Table):
     
     class Meta:         
         attrs = {'class': 'table table-striped table-bordered'}                
+
+class PhenotypeTable(tables.Table):        
+    name = tables.Column()
+    description = tables.Column()
+    currently_held_values = tables.Column()
+    not_null_total = tables.Column()
+    
+    class Meta:
+        attrs = {'class': 'table table-striped table-bordered'}
