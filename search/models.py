@@ -52,6 +52,9 @@ class AffectionStatusPhenotypeValue(models.Model):
     last_updated = models.DateTimeField()
     ## phenotype.db_index = True
     
+    def __unicode__(self):
+        return self.phenotype_value
+    
 class QualitativePhenotypeValue(models.Model):
     phenotype = models.ForeignKey(Phenotype)
     individual = models.ForeignKey(Individual)
@@ -59,6 +62,9 @@ class QualitativePhenotypeValue(models.Model):
     flagged = models.BooleanField() 
     date_created = models.DateTimeField()
     last_updated = models.DateTimeField()
+    
+    def __unicode__(self):
+        return self.phenotype_value
 
 class QuantitiatvePhenotypeValue(models.Model):
     phenotype = models.ForeignKey(Phenotype)
@@ -67,6 +73,9 @@ class QuantitiatvePhenotypeValue(models.Model):
     flagged = models.BooleanField() 
     date_created = models.DateTimeField()
     last_updated = models.DateTimeField()
+    
+    def __unicode__(self):
+        return self.phenotype_value
 
 class Study(models.Model):
     study_name = models.CharField(max_length=100, unique=True)
