@@ -1,5 +1,9 @@
 {% extends "search/base.html" %}
 
 {% block content %}
-	<p class="lead" style="margin-top: 10px;margin-bottom: 10px">{{message}}</p>	
+	<p class="lead" style="margin-top: 10px;margin-bottom: 10px">{{message|safe}}</p>
+	
+	{% load render_table from django_tables2 %}
+	{% render_table table %}
+			
 {% endblock %}
