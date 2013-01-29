@@ -96,7 +96,6 @@
 		});
 
 		$("[id^=from]").change(function() {
-			//alert("hello");
 			var idstr = $(this).attr("id")
 			var idarray = idstr.split("_")
 			var idnum = idarray[1]
@@ -105,6 +104,7 @@
 				$("#where_" + idnum).attr('disabled', true);
 				// remove the current where options
 			} else if ($(this).val() == 'phenotype') {
+				$("#where_" + idnum).attr('disabled', false);
 				var url = "/search/querybuilder/" + $(this).val() + "/all_json_models";
 				var from = $(this).val();
 				$.getJSON(url, function(where) {
@@ -188,11 +188,11 @@
 				<select name="where" id="where_12"></select>
 				<select name="is" id="is_12"></select>
 				<input type="text" name="querystr" id="querystr_12" />
-				<!-- <select name="combine" id="combine_12"> -->
-				<!--	<option value="message"></option>        -->
-				<!--	<option value="phenotype">AND</option>   -->
-				<!--	<option value="phenotype">OR</option>    -->
-				<!-- </select> -->
+				<select name="andor" id="andor_12">
+					<option value="message"></option>
+					<option value="and">AND</option>
+					<option value="or">OR</option>
+				</select>
 			</div>
 		</div>
 	</div>
