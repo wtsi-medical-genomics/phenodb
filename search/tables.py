@@ -1,54 +1,55 @@
 import django_tables2 as tables
+from django_tables2.utils import Accessor
 from search.models import Platform, Study, QC, Source, Individual, Sample
 
 class PlatformTable(tables.Table):        
     class Meta:
-        model = Platform
+        model  = Platform
         fields = ('platform_name', 'platform_type', 'platform_description')
-        attrs = {'class': 'table table-striped table-bordered'}
+        attrs  = {'class': 'table table-striped table-bordered'}
 
 class StudyTable(tables.Table):        
     class Meta:
-        model = Study
+        model  = Study
         fields = ('study_name', 'study_name', 'data_location', 'study_description')         
-        attrs = {'class': 'table table-striped table-bordered'}
+        attrs  = {'class': 'table table-striped table-bordered'}
         
 class QCTable(tables.Table):        
     class Meta:
-        model = QC
+        model  = QC
         fields = ('qc_name', 'qc_description')         
-        attrs = {'class': 'table table-striped table-bordered'}
+        attrs  = {'class': 'table table-striped table-bordered'}
         
 class SourceTable(tables.Table):        
     class Meta:
-        model = Source
+        model  = Source
         fields = ('source_name', 'contact_name', 'source_description')         
-        attrs = {'class': 'table table-striped table-bordered'}
+        attrs  = {'class': 'table table-striped table-bordered'}
 
 class IndividualTable(tables.Table):        
     class Meta:
-        model = Individual
+        model  = Individual
         fields = ('id', 'sex')         
-        attrs = {'class': 'table table-striped table-bordered'}
+        attrs  = {'class': 'table table-striped table-bordered'}
         
 class SampleTable(tables.Table):        
     class Meta:
-        model = Sample
+        model  = Sample
         fields = ('sample_id')         
-        attrs = {'class': 'table table-striped table-bordered'}
+        attrs  = {'class': 'table table-striped table-bordered'}
         
 class CountTable(tables.Table):        
-    name = tables.Column()
+    name  = tables.Column()
     count = tables.Column()
     
     class Meta:         
         attrs = {'class': 'table table-striped table-bordered'}                
 
 class PhenotypeTable(tables.Table):        
-    name = tables.Column()
-    description = tables.Column()
-    currently_held_values = tables.Column()
-    not_null_total = tables.Column()
+    phenotype_name = tables.Column()
+    description    = tables.Column()
+    values         = tables.LinkColumn('search.views.showPhenotypePlot', args=[Accessor("phenotype_id")])
+    total_records  = tables.Column()
     
     class Meta:
         attrs = {'class': 'table table-striped table-bordered'}
