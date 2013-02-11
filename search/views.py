@@ -1,12 +1,14 @@
+# external imports
 from django.shortcuts import render
-from search.models import IndividualIdentifier, AffectionStatusPhenotypeValue, QualitativePhenotypeValue, QuantitiatvePhenotypeValue, StudySamples, Phenotype, Platform, Individual, Study, Sample, Source, QC
-from search.tables import PhenotypeTable, PlatformTable, StudyTable, QCTable, SourceTable, CountTable
-import csv
 from django.http import HttpResponse
 from django.core import serializers
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+import csv
 import json
-
+import StringIO
+# internal imports
+from search.models import IndividualIdentifier, AffectionStatusPhenotypeValue, QualitativePhenotypeValue, QuantitiatvePhenotypeValue, StudySamples, Phenotype, Platform, Individual, Study, Sample, Source, QC
+from search.tables import PhenotypeTable, PlatformTable, StudyTable, QCTable, SourceTable, CountTable
 
 def home(request):
     return render(request, 'search/home.html', {})
@@ -30,6 +32,7 @@ def showSources(request):
 def showPhenotypes(request):
     
     phenotypes = Phenotype.objects.all()
+    
     phenotype_values = []
     
     for phenotype in phenotypes:
@@ -58,21 +61,77 @@ def showPhenotypes(request):
                 values_list = "" 
             not_null_total = QuantitiatvePhenotypeValue.objects.filter(phenotype_id=phenotype.id, phenotype_value__isnull=False).values('phenotype_value').count()
         
-        phenotype_values.append({'name':phenotype.phenotype_name, 'description':phenotype.phenotype_description, 'currently_held_values':values_str, 'not_null_total': not_null_total})
+        phenotype_values.append({'phenotype_id':phenotype.id, 'phenotype_name':phenotype.phenotype_name, 'description':phenotype.phenotype_description, 'values':values_str, 'total_records': not_null_total})
     
     table = PhenotypeTable(phenotype_values)
+    
     return render(request, 'search/dataview.html', {'table': table})
 
 def showIndividuals(request):
     message = "The database currently contains <strong>" + str(Individual.objects.all().count()) + "</strong> individuals"
     message += " and <strong>" + str(IndividualIdentifier.objects.all().count()) + "</strong> individual IDs"
     message += "<br/>Individual IDs by source:"
-    sources = Source.objects.all()
+    
+    return render(request, 'search/summary.html', {'message': message})
+
+def getIndividualData(request):
     source_counts = []
-    for source in sources:
-        source_counts.append({'name':source.source_name,'count':IndividualIdentifier.objects.filter(source_id=source.id).count()})
-    table = CountTable(source_counts)
-    return render(request, 'search/summary.html', {'message': message, 'table': table})
+    for source in Source.objects.all():
+        source_counts.append({'source': source.source_name, 'count': IndividualIdentifier.objects.filter(source_id=source.id).count()})
+            
+    fieldnames = ['source','count']
+    headers = dict( (n,n) for n in fieldnames )
+    
+    myFakeFile = StringIO.StringIO()
+    myWriter = csv.DictWriter( myFakeFile, fieldnames, delimiter='\t')
+    myWriter.writerow(headers)
+    for s in source_counts:
+        myWriter.writerow(s)    
+    
+    return HttpResponse(myFakeFile.getvalue(), content_type='text/tab-separated-values')
+
+def showPhenotypePlot(request, phenotype_id):
+    phenotype = Phenotype.objects.get(id=phenotype_id)
+    return render(request, 'search/barplot.html', {'id': phenotype_id, 'title': phenotype.phenotype_name})
+
+def getPhenotypePlotData(request, phenotype_id):
+    phenotype_value_counts = []
+    phenotype = Phenotype.objects.get(id=phenotype_id)
+    
+    if phenotype.phenotype_type.phenotype_type == 'Affection Status':
+        values_dict_array = AffectionStatusPhenotypeValue.objects.filter(phenotype_id=phenotype.id).order_by('phenotype_value').values('phenotype_value').distinct()                    
+        for value_dict in values_dict_array:
+            phenotype_value = str(value_dict['phenotype_value'])
+            phenotype_value_count = AffectionStatusPhenotypeValue.objects.filter(phenotype_id=phenotype.id, phenotype_value=phenotype_value).count()
+            phenotype_value_counts.append({'value': phenotype_value, 'count': phenotype_value_count})
+
+    elif phenotype.phenotype_type.phenotype_type == 'Qualitative':
+        values_dict_array = QualitativePhenotypeValue.objects.filter(phenotype_id=phenotype.id).values('phenotype_value').distinct()
+        for value_dict in values_dict_array:
+            phenotype_value = str(value_dict['phenotype_value'])
+            phenotype_value_count = QualitativePhenotypeValue.objects.filter(phenotype_id=phenotype.id, phenotype_value=phenotype_value).count()
+            phenotype_value_counts.append({'value': phenotype_value, 'count': phenotype_value_count})
+            
+    elif phenotype.phenotype_type.phenotype_type == 'Quantitative':
+        values_dict_array = QuantitiatvePhenotypeValue.objects.filter(phenotype_id=phenotype.id).order_by('phenotype_value').values('phenotype_value').distinct()
+        for value_dict in values_dict_array:
+            phenotype_value = str(value_dict['phenotype_value'])
+            phenotype_value_count = QuantitiatvePhenotypeValue.objects.filter(phenotype_id=phenotype.id, phenotype_value=phenotype_value).count()
+            phenotype_value_counts.append({'value': phenotype_value, 'count': phenotype_value_count})
+                
+    ## create a tsv file to pass to the d3 plotting library
+    fieldnames = ['value','count']
+    headers = dict( (n,n) for n in fieldnames )
+    
+    myFakeFile = StringIO.StringIO()
+    myWriter = csv.DictWriter( myFakeFile, fieldnames, delimiter='\t')
+    myWriter.writerow(headers)
+    for r in phenotype_value_counts:
+        myWriter.writerow(r)    
+    
+    print myFakeFile.getvalue()
+    
+    return HttpResponse(myFakeFile.getvalue(), content_type='text/tab-separated-values')
 
 def showSamples(request):
     message = "The database currently contains <strong>" + str(Sample.objects.all().count()) + "</strong> samples"
@@ -93,6 +152,9 @@ def all_json_models(request, menuid):
         menuitems = Study.objects.all()
     elif menuid == 'qc':
         menuitems = QC.objects.all()
+    elif menuid == 'source':
+        menuitems = Source.objects.all()
+        
     json_models = serializers.serialize("json", menuitems)
     return HttpResponse(json_models, mimetype="application/javascript")
 
@@ -132,11 +194,11 @@ def querybuilder(request):
         tables    = request.POST.getlist('from')
         wheres    = request.POST.getlist('where')
         where_iss = request.POST.getlist('is')
-        querystrs = request.POST.getlist('querystr')        
-        andors    = request.POST.getlist('andor')
-        search_in = request.POST['searchIn']        
+        querystrs = request.POST.getlist('querystr')                        
         output    = request.POST.getlist('output')
+        search_in = request.POST.get('searchIn')
         page      = request.GET.get('page')
+#        andors    = request.POST.getlist('andor')
                 
         ## check that all the queries contain something for each required field 
         if len(where_iss) == 0 | all(where_iss) is False | len(wheres) == 0 | all(wheres) is False | len(tables) == 0 | all(tables) is False:
@@ -147,34 +209,36 @@ def querybuilder(request):
             message = "No output columns selected, please select output columns and try again."
             return render(request, 'search/querybuilder.html', {'phenotypes':Phenotype.objects.all(),'message':message})
         else:
-            ## create strings of the query arrays so that they can be passed between pages
-            tables_string    = "_".join(tables)
-            wheres_string    = "_".join(wheres)
-            where_iss_string = "_".join(where_iss)
-            querystr_string  = "_".join(querystrs)
-            output_string    = "_".join(output)
+#            set the input options for the session 
+            request.session['tables']    = list(tables)            
+            request.session['wheres']    = list(wheres)
+            request.session['where_iss'] = list(where_iss)
+            request.session['querystrs'] = list(querystrs)       
+            request.session['search_in'] = list(search_in)       
+            request.session['output']    = list(output)
+            request.session['search_in'] = search_in            
             
             ## search all records or from a list of individuals
-            if (search_in == 'userlist'):
+            if search_in == 'userlist':
                 user_ids = []                
-                if (request.POST['individual_list']):
-                    textarea_values = request.POST['individual_list'].splitlines()
+                if request.POST.get('individual_list'):
+                    textarea_values = request.POST.get('individual_list').splitlines()
                     for line in textarea_values:
                         if (line.strip()):
                             user_ids.append(line.strip())
                                                 
-                elif (request.FILES['individual_file']):
-                    indFile = request.FILES['individual_file']                    
+                elif request.FILES.get('individual_file'):
+                    indFile = request.FILES.get('individual_file')                    
                     if not indFile.multiple_chunks():
                         file_lines = indFile.read().splitlines()                        
                         for line in file_lines:
                             if (line.strip()):
-                                user_ids.append(line.strip())                         
+                                user_ids.append(line.strip())                                    
                     else:
                         message = "Sorry your file '" + indFile.name + "' is too large to read into memory."
                         return render(request, 'search/querybuilder.html', {'phenotypes':Phenotype.objects.all(),'message':message})                    
                                 
-                if (len(user_ids) > 0):                    
+                if len(user_ids) > 0:                    
                     # array of tuples
                     db_ids = []                
                     for user_id in user_ids:                                                
@@ -183,13 +247,14 @@ def querybuilder(request):
                             # append just the first tuple of the list !?!?
                             db_ids.append(query_result[0])
                                                         
-                    if (len(db_ids) > 0):
+                    if len(db_ids) > 0:
                         results = perform_queries_with_ids(request, tables, wheres, where_iss, querystrs, db_ids)
                         result_ids = results[0]
                         query_summary = results[1]
+                        request.session['user_ids'] = list(db_ids)
                         if len(result_ids) > 0:
                             table = generate_results_table(result_ids, results_per_page, page, output)
-                            return render(request, 'search/queryresults.html', {'tablehtml': table[0], 'page_results':table[1], 'output_str': output_string, 'count':len(result_ids), 'tables_str':tables_string, 'where_str':wheres_string, 'whereis_str':where_iss_string, 'querystr_str':querystr_string, 'query_summary':query_summary, 'results_per_page':results_per_page})
+                            return render(request, 'search/queryresults.html', {'tablehtml': table[0], 'page_results':table[1], 'count':len(result_ids), 'query_summary':query_summary, 'results_per_page':results_per_page})
                         else:
                             message = "Sorry your query didn't return any results, please try another query."
                             return render(request, 'search/querybuilder.html', {'phenotypes':Phenotype.objects.all(),'message':message})
@@ -202,13 +267,13 @@ def querybuilder(request):
                 
                 ## allow the users to just supply the list of inds and a null filter
                                 
-            elif (search_in ==  'all'):
+            elif search_in ==  'all':
                 query_results = perform_queries(request, tables, wheres, where_iss, querystrs)
                 result_ids = query_results[0]
                 query_summary = query_results[1] 
                 if len(result_ids) > 0:
                     table = generate_results_table(result_ids, results_per_page, page, output)
-                    return render(request, 'search/queryresults.html', {'tablehtml': table[0], 'page_results':table[1], 'output_str': output_string, 'count':len(result_ids), 'tables_str':tables_string, 'where_str':wheres_string, 'whereis_str':where_iss_string, 'querystr_str':querystr_string, 'query_summary':query_summary, 'results_per_page':results_per_page})
+                    return render(request, 'search/queryresults.html', {'tablehtml': table[0], 'page_results':table[1], 'count':len(result_ids), 'query_summary':query_summary, 'results_per_page':results_per_page})
                 else:
                     message = "Sorry your query didn't return any results, please try another query."
                     return render(request, 'search/querybuilder.html', {'phenotypes':Phenotype.objects.all(),'message':message})
@@ -216,37 +281,53 @@ def querybuilder(request):
         # pass all the phenotypes/platforms/studies etc to the form                 
         return render(request, 'search/querybuilder.html', {'phenotypes':Phenotype.objects.all()})
         
-def querypage(request, page, results_per_page, tables_string, wheres_string, where_iss_string, querystr_string, output_string):
-    tables = tables_string.split("_")
-    wheres = wheres_string.split("_")
-    where_iss = where_iss_string.split("_")
-    querystrs = querystr_string.split("_")
-    output = output_string.split("_")
+def querypage(request, page, results_per_page):
     
-    query_results = perform_queries(request, tables, wheres, where_iss, querystrs)
-    result_ids = query_results[0]
-    query_summary = query_results[1]
-
+    tables = request.session.get('tables')
+    wheres = request.session.get('wheres')
+    where_iss = request.session.get('where_iss')
+    querystrs = request.session.get('search_in')
+    output = request.session.get('output')
+    search_in = request.session.get('search_in')
+    
+    if search_in == 'userlist':
+        db_ids = request.session.get('user_ids')
+        results = perform_queries_with_ids(request, tables, wheres, where_iss, querystrs, db_ids)
+        result_ids = results[0]
+        query_summary = results[1]
+        
+    elif search_in ==  'all':
+        query_results = perform_queries(request, tables, wheres, where_iss, querystrs)
+        result_ids = query_results[0]
+        query_summary = query_results[1]
+    
     table = generate_results_table(result_ids, results_per_page, page, output)
-    return render(request, 'search/queryresults.html', {'tablehtml': table[0], 'page_results':table[1], 'output_str': output_string, 'count':len(result_ids), 'tables_str':tables_string, 'where_str':wheres_string, 'whereis_str':where_iss_string, 'querystr_str':querystr_string, 'query_summary':query_summary, 'results_per_page':results_per_page})
+    return render(request, 'search/queryresults.html', {'tablehtml': table[0], 'page_results':table[1], 'count':len(result_ids), 'query_summary':query_summary, 'results_per_page':results_per_page})
     
-def query_export(request, tables_str, where_str, whereis_str, querystr_str, output_str):
-    ## split the strings containing multiple values
-    tables = tables_str.split("_")
-    wheres = where_str.split("_")
-    where_iss = whereis_str.split("_")
-    querystrs = querystr_str.split("_")
-    output = output_str.split("_")
+def query_export(request):
+    tables = request.session.get('tables')
+    wheres = request.session.get('wheres')
+    where_iss = request.session.get('where_iss')
+    querystrs = request.session.get('search_in')
+    output = request.session.get('output')
+    search_in = request.session.get('search_in')
     
-    query_results = perform_queries(request, tables, wheres, where_iss, querystrs)
-    query_ids = query_results[0]
-    query_ids_objs = parse_query_results(query_ids)
-    parsed_results = get_output_data(query_ids_objs, output)
+    if search_in == 'userlist':
+        db_ids = request.session.get('user_ids')
+        results = perform_queries_with_ids(request, tables, wheres, where_iss, querystrs, db_ids)
+        result_ids = results[0]
+        
+    elif search_in ==  'all':
+        query_results = perform_queries(request, tables, wheres, where_iss, querystrs)
+        result_ids = query_results[0]
+        
+    result_ids_objs = parse_query_results(result_ids)
+    parsed_results = get_output_data(result_ids_objs, output)
         
     response = HttpResponse(mimetype='text/csv')
-    response['Content-Disposition'] = 'attachment; filename="export.csv"'
+    response['Content-Disposition'] = 'attachment; filename="export.tsv"'
     
-    writer = csv.writer(response)
+    writer = csv.writer(response, delimiter="\t")
 
     for e in parsed_results:
         writer.writerow(e)    
@@ -296,15 +377,17 @@ def query_db(table, where, where_is, querystr, last_query):
                 result_set = QuantitiatvePhenotypeValue.objects.filter(phenotype__exact=phenotype.id, phenotype_value__isnull=True).values_list('individual_id')
             elif where_is == 'notnull':
                 result_set = QuantitiatvePhenotypeValue.objects.filter(phenotype__exact=phenotype.id, phenotype_value__isnull=False).values_list('individual_id')
+    elif table == 'source':
+        result_set = IndividualIdentifier.objects.filter(source=where).values_list('individual_id')
         
-        if last_query is not None:
-            if result_set.count() > 0:
-                intersection_set = set(list(last_query)).intersection(set(list(result_set)))
-                return list(intersection_set)
-            else:   
-                return None
-        else:
-            return result_set                        
+    if last_query is not None:
+        if result_set.count() > 0:
+            intersection_set = set(list(last_query)).intersection(set(list(result_set)))
+            return list(intersection_set)
+        else:   
+            return None
+    else:
+        return result_set                        
 
 def parse_query_results(query_results):
     
@@ -342,13 +425,13 @@ def get_output_data(page_results, output_columns):
                 identifier_string = ""
                 for i in ind_strings:                    
                     identifier_string = " ".join((i['individual_string'], identifier_string))
-                row_values.append(identifier_string)                
+                row_values.append(identifier_string.strip())                
             elif column == 'Source':
                 ind_objects = IndividualIdentifier.objects.filter(individual_id = ind_id)
                 source_string = ""
                 for i in ind_objects:
                     source_string = " ".join((i.source.source_name, source_string))
-                row_values.append(source_string)
+                row_values.append(source_string.strip())
             elif column == 'Sex':
                 indObject = Individual.objects.get(id = ind_id)
                 if (indObject.sex == 1):
@@ -362,19 +445,19 @@ def get_output_data(page_results, output_columns):
                 sample_string = ""
                 for s in sample_ids:
                     sample_string = " ".join((s['sample_id'], sample_string))    
-                row_values.append(sample_string)                
+                row_values.append(sample_string.strip())                
             elif column == 'Study':
                 samples = Sample.objects.filter(individual_id = ind_id)
                 study_string = ""
                 for s in samples:
                     study_string = " ".join((s.studysample.study.study_name, study_string))    
-                row_values.append(study_string)
+                row_values.append(study_string.strip())
             elif column == 'Platform':
                 samples = Sample.objects.filter(individual_id = ind_id)
                 platform_string = ""
                 for s in samples:
                     platform_string = " ".join((s.studysample.study.platform.platform_name, platform_string))    
-                row_values.append(study_string)
+                row_values.append(platform_string.strip())
 #            elif column == 'QC': 
             elif str(column).startswith("phenotype"):               
                 phenotype_id = column.split(":")[1] 
@@ -409,12 +492,17 @@ def perform_queries(request, tables, wheres, where_iss, querystrs):
     ## perform the first query:        
     table = tables.pop()        
     where = wheres.pop()
-    where_is = where_iss.pop()                
+    
+    if table == 'source':
+#        there is no where_is value for a source query
+        where_is = ''
+    else:
+        where_is = where_iss.pop()                
                 
     phenotype = Phenotype.objects.get(id=where)
     phenotype_type = phenotype.phenotype_type.phenotype_type
                                             
-    if phenotype_type == 'Affection Status':
+    if phenotype_type == 'Affection Status' or table == 'source':
         querystr = ''
     else:
         querystr = querystrs.pop().strip()
@@ -427,15 +515,20 @@ def perform_queries(request, tables, wheres, where_iss, querystrs):
     while len(tables) > 0:
         table = tables.pop()
         where = wheres.pop()
-        where_is = where_iss.pop()
+        
+        if table == 'source':
+#        there is no where_is value for a source query
+            where_is = ''
+        else:
+            where_is = where_iss.pop()
                     
         phenotype = Phenotype.objects.get(id=where)
         phenotype_type = phenotype.phenotype_type.phenotype_type
                             
-        if phenotype_type != 'Affection Status':
-            querystr = querystrs.pop().strip()
-        else:
+        if phenotype_type == 'Affection Status' or table == 'source':
             querystr = ''
+        else:
+            querystr = querystrs.pop().strip()
                                         
         if len(query_results) > 0:
             query_results = query_db(table, where, where_is, querystr, query_results)
@@ -452,15 +545,21 @@ def perform_queries_with_ids(request, tables, wheres, where_iss, querystrs, quer
     while len(tables) > 0:
         table = tables.pop()
         where = wheres.pop()
-        where_is = where_iss.pop()
-                    
+        
+        if table == 'source':
+#       there is no where_is value for a source query
+            where_is = ''
+        else:
+            where_is = where_iss.pop() 
+                
         phenotype = Phenotype.objects.get(id=where)
         phenotype_type = phenotype.phenotype_type.phenotype_type
                             
-        if phenotype_type != 'Affection Status':
-            querystr = querystrs.pop().strip()
-        else:
+        if phenotype_type == 'Affection Status' or table == 'source':
             querystr = ''
+        else:
+            querystr = querystrs.pop().strip()
+            
                                         
         if len(query_results) > 0:
             query_results = query_db(table, where, where_is, querystr, query_results)
