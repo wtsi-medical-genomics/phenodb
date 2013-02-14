@@ -2,7 +2,7 @@
 
 {% block script %}
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.8.1/jquery.min.js"></script>
- 
+  
   <script type="text/javascript">
     $(document).ready(function() {
  	  $("[id^=results_per_page]").change(function() { 				
@@ -10,9 +10,9 @@
  		if (perpage != 'message') {
 		  var url = "";
 		  if (perpage == 'all') {
-		  	url = "/search/querybuilder" + '/1/{{page_results.paginator.count}}/{{tables_str}}/{{where_str}}/{{whereis_str}}/{{output_str}}/{{querystr_str}}/';
+		  	url = "/search/querybuilder" + '/1/{{page_results.paginator.count}}/';
 		  } else {
-		  	url = "/search/querybuilder" + '/{{page_results.number}}/' + perpage + '/{{tables_str}}/{{where_str}}/{{whereis_str}}/{{output_str}}/{{querystr_str}}/';
+		  	url = "/search/querybuilder" + '/{{page_results.number}}/' + perpage + '/';
 		  }
 		  window.location.href = url;
 		} 								
@@ -44,19 +44,19 @@
   {{tablehtml|safe}}
 
 <div>
-  <a href={% url search-exportcsv tables_str where_str whereis_str output_str querystr_str %}><i class="icon-file"></i><em>export to .csv</em></a>
+  <a href={% url search-exportcsv %}><i class="icon-file"></i><em>export to .tsv</em></a>
 </div>
 
 <div class="pagination pagination-centered">
   <ul>
     {% if page_results.has_previous %}
-      <li><a href={% url search-querypage page_results.previous_page_number results_per_page tables_str where_str whereis_str output_str querystr_str %}>previous</a></li>
+      <li><a href={% url search-querypage page_results.previous_page_number results_per_page %}>previous</a></li>
     {% else %}
       <li class="active"><a href="?page={{ page_results.previous_page_number }}">previous</a></li>
     {% endif %}
     <li class="active"><a href="#">{{ page_results.number }}</a></li>
     {% if page_results.has_next %}
-      <li><a href={% url search-querypage page_results.next_page_number results_per_page tables_str where_str whereis_str output_str querystr_str %}>next</a></li>
+      <li><a href={% url search-querypage page_results.next_page_number results_per_page %}>next</a></li>
     {% else %}
       <li class="active"><a href="/search/querybuilder/?page={{ page_results.next_page_number }}">next</a></li>
     {% endif %}
