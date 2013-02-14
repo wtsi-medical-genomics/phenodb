@@ -29,19 +29,34 @@ class Phenotype(models.Model):
         return self.phenotype_name
     
 class Individual(models.Model):
-#    father = models.ForeignKey(Individual)
-#    mother = models.ForeignKey(Individual)
-    sex = models.SmallIntegerField()
-    has_dup = models.BooleanField()
-    flagged = models.BooleanField()
+    active_id = models.ForeignKey('self')
     date_created = models.DateTimeField()
     last_updated = models.DateTimeField()
     
-#class Duplicate(models.Model):
-#    individual_1 = models.ForeignKey(Individual)
-#    individual_2 = models.ForeignKey(Individual)
-#    date_created = models.DateTimeField()
-#    last_updated = models.DateTimeField()
+class PhenodbIdentifier(models.Model):
+    phenodb_id = models.CharField(max_length=100)
+    individual = models.OneToOneField(Individual, primary_key=True)    
+    date_created = models.DateTimeField()
+    last_updated = models.DateTimeField()
+    
+    def __unicode__(self):
+        return self.individual_string
+
+class Collection(models.Model):
+    collection_name = models.CharField(max_length=100, unique=True)
+    collection_description = models.TextField()
+    
+    def __unicode__(self):
+        return self.source_name
+
+class IndividualCollection(models.Model):
+    individual = models.ForeignKey(Individual)
+    collection = models.ForeignKey(Collection)
+    date_created = models.DateTimeField()
+    last_updated = models.DateTimeField()
+    
+    def __unicode__(self):
+        return self.individual_string
 
 class AffectionStatusPhenotypeValue(models.Model):
     phenotype = models.ForeignKey(Phenotype)
@@ -94,7 +109,7 @@ class Sample(models.Model):
     date_created = models.DateTimeField()
     last_updated = models.DateTimeField()
     
-class StudySamples(models.Model):
+class StudySample(models.Model):
     study = models.ForeignKey(Study)
     sample = models.ForeignKey(Sample)
     date_created = models.DateTimeField()
@@ -128,9 +143,7 @@ class QC(models.Model):
         return self.qc_name
     
 class SampleQC(models.Model):
-    sample = models.ForeignKey(Sample)
-    platform = models.ForeignKey(Platform)
-    study = models.ForeignKey(Study)
+    study_sample = models.ForeignKey(StudySample)
     qc = models.ForeignKey(QC)
     qc_pass = models.BooleanField()
     date_created = models.DateTimeField()
