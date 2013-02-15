@@ -39,7 +39,8 @@
 				if ($(this).val() == 'message') {
 					$("#where_" + idnum).attr('disabled', true);
 					// remove the current where options
-				} else {
+				} else if ($(this).val() == 'phenotype') {
+					$("#where_" + idnum).attr('disabled', false);
 					var url = "/search/querybuilder/" + $(this).val() + "/all_json_models";
 					var from = $(this).val();
 					$.getJSON(url, function(where) {
@@ -47,6 +48,18 @@
 						for (var i = 0; i < where.length; i++) {
 							// change phenotype_name to "from_value + name"
 							options += '<option value="' + where[i].pk + '">' + where[i].fields['phenotype_name'] + '</option>';
+						}
+						$("#where_" + idnum).html(options);
+					});
+				} else if ($(this).val() == 'source') {
+					$("#where_" + idnum).attr('disabled', false);
+					var url = "/search/querybuilder/" + $(this).val() + "/all_json_models";
+					var from = $(this).val();
+					$.getJSON(url, function(where) {
+						var options = '<option value="message">Select a filter</option>';
+						for (var i = 0; i < where.length; i++) {
+							// change phenotype_name to "from_value + name"
+							options += '<option value="' + where[i].pk + '">' + where[i].fields['source_name'] + '</option>';
 						}
 						$("#where_" + idnum).html(options);
 					});
