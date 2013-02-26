@@ -29,12 +29,12 @@ class Phenotype(models.Model):
         return self.phenotype_name
     
 class Individual(models.Model):
-    active_id = models.ForeignKey('self')
+    active_id = models.ForeignKey('self', null=True, blank=True)
     date_created = models.DateTimeField()
     last_updated = models.DateTimeField()
     
 class PhenodbIdentifier(models.Model):
-    phenodb_id = models.CharField(max_length=100)
+    phenodb_id = models.CharField(max_length=100, unique=True)
     individual = models.OneToOneField(Individual, primary_key=True)    
     date_created = models.DateTimeField()
     last_updated = models.DateTimeField()
@@ -114,6 +114,55 @@ class StudySample(models.Model):
     sample = models.ForeignKey(Sample)
     date_created = models.DateTimeField()
     last_updated = models.DateTimeField()
+    
+    
+class SampleFeatureType(models.Model):
+    sample_feature_type = models.CharField(max_length=100, unique=True)
+    
+    def __unicode__(self):
+        return self.phenotype_type
+
+class SampleFeature(models.Model):
+    sample_feature_name = models.CharField(max_length=100, unique=True)
+    sample_feature_type = models.ForeignKey(SampleFeatureType)
+    sample_feature_description = models.TextField()
+
+    def __unicode__(self):
+        return self.phenotype_name    
+    
+class AffectionStatusSampleFeatureValue(models.Model):
+    sample_feature = models.ForeignKey(SampleFeature)
+    sample = models.ForeignKey(Sample)
+    sample_feature_value = models.SmallIntegerField()
+    flagged = models.BooleanField() 
+    date_created = models.DateTimeField()
+    last_updated = models.DateTimeField()
+    ## phenotype.db_index = True
+    
+    def __unicode__(self):
+        return self.sample_feature_value
+    
+class QualitativeSampleFeatureValue(models.Model):
+    sample_feature = models.ForeignKey(SampleFeature)
+    sample = models.ForeignKey(Sample)
+    sample_feature_value = models.CharField(max_length=200)
+    flagged = models.BooleanField() 
+    date_created = models.DateTimeField()
+    last_updated = models.DateTimeField()
+    
+    def __unicode__(self):
+        return self.sample_feature_value
+
+class QuantitiatveSampleFeatureValue(models.Model):
+    sample_feature = models.ForeignKey(SampleFeature)
+    sample = models.ForeignKey(Sample)
+    sample_feature_value = models.DecimalField(max_digits=10, decimal_places=2)
+    flagged = models.BooleanField() 
+    date_created = models.DateTimeField()
+    last_updated = models.DateTimeField()
+    
+    def __unicode__(self):
+        return self.sample_feature_value    
     
 class Source(models.Model):
     source_name = models.CharField(max_length=100, unique=True)
