@@ -7,7 +7,7 @@ import csv
 import json
 import StringIO
 # internal imports
-from search.models import IndividualIdentifier, AffectionStatusPhenotypeValue, QualitativePhenotypeValue, QuantitiatvePhenotypeValue, StudySamples, Phenotype, Platform, Individual, Study, Sample, Source, QC
+from search.models import IndividualIdentifier, AffectionStatusPhenotypeValue, QualitativePhenotypeValue, QuantitiatvePhenotypeValue, StudySample, Phenotype, Platform, Individual, Study, Sample, Source, QC
 from search.tables import PhenotypeTable, PlatformTable, StudyTable, QCTable, SourceTable, CountTable
 
 def home(request):
@@ -36,6 +36,7 @@ def showPhenotypes(request):
     phenotype_values = []
     
     for phenotype in phenotypes:
+        values_str = ""
         if phenotype.phenotype_type.phenotype_type == 'Affection Status':
             values_dict_array = AffectionStatusPhenotypeValue.objects.filter(phenotype_id=phenotype.id).order_by('phenotype_value').values('phenotype_value').distinct()            
             values_list = []
@@ -139,7 +140,7 @@ def showSamples(request):
     studies = Study.objects.all()
     study_counts = []
     for study in studies:
-        study_counts.append({'name':study.study_name,'count':StudySamples.objects.filter(study_id=study.id).count()})
+        study_counts.append({'name':study.study_name,'count':StudySample.objects.filter(study_id=study.id).count()})
     table = CountTable(study_counts)
     return render(request, 'search/summary.html', {'message': message, 'table': table})
 
@@ -441,7 +442,7 @@ def get_output_data(page_results, output_columns):
                 else:
                     row_values.append("Unkown")
             elif column == 'SampleIDs':
-                sample_ids = Sample.objects.filter(individual_id = ind_id).values('sample_id')
+                sample_ids = Sample.objects.filter(individual_id = ind_id).distinct().values('sample_id')
                 sample_string = ""
                 for s in sample_ids:
                     sample_string = " ".join((s['sample_id'], sample_string))    
