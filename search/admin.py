@@ -28,7 +28,7 @@ class BulkUploadAdmin(admin.ModelAdmin):
     
     form = BulkUploadForm
     true_list = ["Yes", "yes", "true", "True", "1", "Affected", "affected"]
-    false_list = ["No", "no", "false", "False", "0", '', "Unaffected", "unaffected"]
+    false_list = ["No", "no", "false", "False", "0", "Unaffected", "unaffected"]
     
     #Overrides model object saving.
     def save_model(self, request, obj, form, change):
@@ -36,77 +36,81 @@ class BulkUploadAdmin(admin.ModelAdmin):
         import_data_type = request.POST["import_data_type"]
         warehouseCursor = connections['warehouse'].cursor()
         for line in records:
-            if import_data_type == "Individuals":                
-                
-                ## required columns: Sample ID,Supplying Centre,Supplying centre sample ID,Sex,                
+        
+            if import_data_type == "Individuals":
+                ## required columns: Centre,Centre ID                
                 try:
-                    source = Source.objects.get(source_name=line['Supplying Centre'])
-                except Source.DoesNotExist:
-                    messages.error(request, u"Can't find source in database '" + line['Supplying Centre'] + u"'")
-                    continue                
+                    centre = line['Centre']
+                    centre_id = line['Centre ID']                    
+                except KeyError:
+                    messages.error(request, u"Input file is missing required column(s) 'Centre,Centre ID'")
+                    return     
                 
+                try:
+                    source = Source.objects.get(source_name=centre)
+                except Source.DoesNotExist:
+                    messages.error(request, u"Can't find source in database '" + centre + u"'")
+                    continue
+                               
                 ## check if the id has already been entered for the given source
-                if IndividualIdentifier.objects.filter(individual_string=line['Supplying centre sample ID'],source_id=source.id).count() > 0:
-                    messages.error(request, u"Individual '" + line['Supplying centre sample ID'] + u"' already added for this source")
+                if IndividualIdentifier.objects.filter(individual_string=centre_id,source_id=source.id).count() > 0:
+                    messages.error(request, u"Individual '" + centre_id + u"' already added for this source")
                     continue
                 
-                ind = Individual()
-                if str.isdigit(line['Sex']):
-                    ind.sex = line['Sex']
-                else:
-                    if line['Sex'] == "Female":
-                        ind.sex = 2
-                    elif line['Sex'] == "Male":
-                        ind.sex = 1
-                    else:
-                        ind.sex = 0
-
-#                warehouseCursor.execute("SELECT DISTINCT gender FROM samples WHERE supplier_name = %s ORDER BY checked_at desc", line['Supplying centre sample ID'])
-#                row = warehouseCursor.fetchone()
-#                if row[0] is None:
-#                    messages.error(request, u"Individual " + line['Supplying centre sample ID'] + u" NOT found in warehouse")
-#                    continue
-#                else:           
-#                    if row[2] == "Female":
-#                        if ind.sex == 0:
-#                            ind.sex = 2                        
-#                        elif ind.sex == 1:
-#                            messages.error(request, u"gender does not match warehouse for individual "  + line['Supplying centre sample ID'])
-#                    elif row[2] == "Male":
-#                        if ind.sex == 0:
-#                            ind.sex = 1                        
-#                        elif ind.sex == 2:
-#                            messages.error(request, u"gender does not match warehouse for individual "  + line['Supplying centre sample ID'])
-                            
-                ind.has_dup = False
-                ind.flagged = False
-                ## django 1.4 only
-#                ind.date_created = datetime.datetime.utcnow().replace(tzinfo=utc)
-#                ind.last_updated = datetime.datetime.utcnow().replace(tzinfo=utc)
+                ## an empty active_id field means that the object refers to itself!
+                ## if the active_id field is not empty, that means it refers to another individual object
+                ind = Individual()                
                 ind.date_created = datetime.datetime.now()
                 ind.last_updated = datetime.datetime.now()
                 ind.save()                    
-                                
+                
+                ## create the phenodb_id
+                pdbId = PhenodbIdentifier()
+                pdbId.individual = ind
+                pdbId.phenodb_id = u"pdb" + str(ind.pk)
+                pdbId.date_created = datetime.datetime.now()
+                pdbId.last_updated = datetime.datetime.now()
+                pdbId.save()
+                
+                try:
+                    collection = line['Collection']
+                    coll = Collection.objects.get(collection_name=collection)
+                except Collection.DoesNotExist:
+                    messages.error(request, u"Can't find collection in database '" + collection + u"'")
+                    collection = None
+                except KeyError:
+                    collection = None
+                    
+                if collection is not None:
+                    indColl = IndividualCollection()
+                    indColl.individual = ind
+                    indColl.collection = coll
+                    indColl.date_created = datetime.datetime.now()
+                    indColl.last_updated = datetime.datetime.now()
+                    indColl.save()
+                      
                 ## insert the individual identifier
                 indId = IndividualIdentifier()
                 indId.individual = ind
-                indId.individual_string = line['Supplying centre sample ID']
+                indId.individual_string = centre_id                
                 indId.source = source
-                ## django 1.4 only
-#                indId.date_created = datetime.datetime.utcnow().replace(tzinfo=utc)
-#                indId.last_updated = datetime.datetime.utcnow().replace(tzinfo=utc)
                 indId.date_created = datetime.datetime.now()
                 indId.last_updated = datetime.datetime.now()                
                 try:
                     indId.save()
                 except IntegrityError:
-                    messages.error(request, u"Individual ID " + line['Supplying centre sample ID'] + " is already in the database")
+                    messages.error(request, u"Individual ID " + centre_id + " is already in the database")
                     continue
                                         
                 ## insert phenotype values
-                for col in line:     
-                    if line[col] is None:
-                        continue               
+                for col in line:                      
+                    try:   
+                        if len(line[col]) == 0:
+                            continue
+                    except TypeError:
+                        ## vale is None
+                        continue
+                                   
                     try:
                         pheno = Phenotype.objects.get(phenotype_name=col)
                     except Phenotype.DoesNotExist:
@@ -125,9 +129,6 @@ class BulkUploadAdmin(admin.ModelAdmin):
                         else:
                             continue
                         affectVal.flagged = False
-                        ## django 1.4 only
-#                        affectVal.date_created = datetime.datetime.utcnow().replace(tzinfo=utc)
-#                        affectVal.last_updated = datetime.datetime.utcnow().replace(tzinfo=utc)
                         affectVal.date_created = datetime.datetime.now()
                         affectVal.last_updated = datetime.datetime.now()
                         try:
@@ -138,11 +139,8 @@ class BulkUploadAdmin(admin.ModelAdmin):
                         qualVal = QualitativePhenotypeValue()
                         qualVal.phenotype = pheno
                         qualVal.individual = ind
-                        qualVal.phenotype_value = line[col]
+                        qualVal.phenotype_value = line[col].strip()
                         qualVal.flagged = False
-                        ## django 1.4 only
-#                        qualVal.date_created = datetime.datetime.utcnow().replace(tzinfo=utc)
-#                        qualVal.last_updated = datetime.datetime.utcnow().replace(tzinfo=utc)
                         qualVal.date_created = datetime.datetime.now()
                         qualVal.last_updated = datetime.datetime.now()
                         try:
@@ -157,9 +155,6 @@ class BulkUploadAdmin(admin.ModelAdmin):
                             continue
                         quantVal.phenotype_value = Decimal(line[col])                            
                         quantVal.flagged = False
-                        ## django 1.4 only 
-#                        quantVal.date_created = datetime.datetime.utcnow().replace(tzinfo=utc)
-#                        quantVal.last_updated = datetime.datetime.utcnow().replace(tzinfo=utc)
                         quantVal.date_created = datetime.datetime.now()
                         quantVal.last_updated = datetime.datetime.now()
                         try:
@@ -206,29 +201,42 @@ class BulkUploadAdmin(admin.ModelAdmin):
                 messages.success(request, u"Source " + line['Centre'] + u" was added to PhenoDB")
                     
             elif import_data_type == "Samples":
-                ## required columns: Supplier_ID,Sample_ID
+                ## required columns: Centre,Centre ID,Sample ID                
+                try:
+                    centre = line['Centre']
+                    centre_id = line['Centre ID']
+                    sample_id = line['Sample ID']                    
+                except KeyError:
+                    messages.error(request, u"Input file is missing required column(s) 'Centre,Centre ID,Sample ID'")
+                    return     
                 
                 try:
-                    source = Source.objects.get(source_name=line['Supplying Centre'])
+                    source = Source.objects.get(source_name=centre)
                 except Source.DoesNotExist:
-                    messages.error(request, u"Can't find source in database '" + line['Supplying Centre'] + u"'")
+                    messages.error(request, u"Can't find source in database '" + centre + u"'")
                     continue                
+                
+                ## get the individual id
+                
+                ## check that a sample has not already been entered for the ind with the same name
                 
                 ## check if the id has already been entered for the given source
                 try:
-                    sampleIndId = IndividualIdentifier.objects.get(individual_string=line['Supplying centre sample ID'],source_id=source.id)
+                    sampleIndId = IndividualIdentifier.objects.get(individual_string=centre_id,source_id=source.id)
                 except IndividualIdentifier.DoesNotExist:
-                    messages.error(request, u"Individual " + line['Supplying centre sample ID'] + u" NOT found in phenodb")
+                    messages.error(request, u"Individual " + centre_id + u" NOT found in phenodb")
+                    continue
+                
+                if Sample.objects.filter(individual=sampleIndId.individual,sample_id=sample_id).count() > 0:
+                    messages.error(request, u"Sample ID '" + sample_id + u"' already added for this individual")
                     continue
                           
                 sample = Sample()
                 sample.individual = sampleIndId.individual
-                sample.sample_id = line['Sample ID']
-                ## django 1.4 only
-#                sample.date_created = datetime.datetime.utcnow().replace(tzinfo=utc)
-#                sample.last_updated = datetime.datetime.utcnow().replace(tzinfo=utc)
+                sample.sample_id = sample_id
                 sample.date_created = datetime.datetime.now()
                 sample.last_updated = datetime.datetime.now()
+                
                 warehouseCursor.execute("SELECT DISTINCT sanger_sample_id, supplier_name, gender FROM samples WHERE name = %s ORDER BY checked_at desc", sample.sample_id)
                 row = warehouseCursor.fetchone()
                 if row is None:
@@ -240,7 +248,7 @@ class BulkUploadAdmin(admin.ModelAdmin):
                 if row[1] != sampleIndId.individual_string:
                     messages.error(request, u"supplier name " + str(sampleIndId.individual_string) + u" does not match warehouse "  + row[1])
                     try:
-                        source = Source.objects.get(source_name=line['Supplying Centre'])
+                        source = Source.objects.get(source_name=centre)
                     except Source.DoesNotExist:
                         continue
                     ## insert the new individual identifier
@@ -248,20 +256,17 @@ class BulkUploadAdmin(admin.ModelAdmin):
                     indId.individual = sampleIndId.individual
                     indId.individual_string = row[1]
                     indId.source = source
-                    ## django 1.4 only
-#                    indId.date_created = datetime.datetime.utcnow().replace(tzinfo=utc)
-#                    indId.last_updated = datetime.datetime.utcnow().replace(tzinfo=utc)
                     indId.date_created = datetime.datetime.now()
                     indId.last_updated = datetime.datetime.now()
                     try:
                         indId.save()
                     except IntegrityError:
-                        messages.error(request, u"Individual ID " + line['Supplying centre sample ID'] + " is already in the database")
+                        messages.error(request, u"Individual ID " + row[1] + " is already in the database")
                         continue                                                               
                 try:
                     sample.save()
                 except IntegrityError:
-#                   messages.error(request, u"Sample " + line['Sample ID'] + " is already in the database")
+#                   messages.error(request, u"Sample " + sample_id + " is already in the database")
                     continue
                 transaction.commit()
         return
@@ -289,3 +294,4 @@ admin.site.register(Study, StudyAdmin)
 admin.site.register(Source, SourceAdmin)
 admin.site.register(QC, QCAdmin)
 admin.site.register(BulkUpload, BulkUploadAdmin)
+admin.site.register(Collection)
