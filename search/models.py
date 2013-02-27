@@ -40,23 +40,20 @@ class PhenodbIdentifier(models.Model):
     last_updated = models.DateTimeField()
     
     def __unicode__(self):
-        return self.individual_string
+        return self.phenodb_id
 
 class Collection(models.Model):
     collection_name = models.CharField(max_length=100, unique=True)
     collection_description = models.TextField()
     
     def __unicode__(self):
-        return self.source_name
+        return self.collection_name
 
 class IndividualCollection(models.Model):
     individual = models.ForeignKey(Individual)
     collection = models.ForeignKey(Collection)
     date_created = models.DateTimeField()
     last_updated = models.DateTimeField()
-    
-    def __unicode__(self):
-        return self.individual_string
 
 class AffectionStatusPhenotypeValue(models.Model):
     phenotype = models.ForeignKey(Phenotype)
