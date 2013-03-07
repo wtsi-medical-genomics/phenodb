@@ -1,6 +1,6 @@
 import django_tables2 as tables
 from django_tables2.utils import Accessor
-from search.models import Platform, Study, QC, Source, Individual, Sample
+from search.models import Platform, Study, QC, Source, Individual, Sample, Collection
 
 class PlatformTable(tables.Table):        
     class Meta:
@@ -24,6 +24,12 @@ class SourceTable(tables.Table):
     class Meta:
         model  = Source
         fields = ('source_name', 'contact_name', 'source_description')         
+        attrs  = {'class': 'table table-striped table-bordered'}
+        
+class CollectionTable(tables.Table):        
+    class Meta:
+        model  = Collection
+        fields = ('collection_name', 'collection_description')         
         attrs  = {'class': 'table table-striped table-bordered'}
 
 class IndividualTable(tables.Table):        
