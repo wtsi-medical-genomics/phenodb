@@ -29,7 +29,7 @@ class Phenotype(models.Model):
         return self.phenotype_name
     
 class Individual(models.Model):
-    active_id = models.ForeignKey('self', null=True, blank=True)
+    active = models.ForeignKey('self', null=True, blank=True)
     date_created = models.DateTimeField()
     last_updated = models.DateTimeField()
     
@@ -176,6 +176,9 @@ class IndividualIdentifier(models.Model):
     date_created = models.DateTimeField()
     last_updated = models.DateTimeField()
     
+    class Meta:
+        unique_together = ('individual_string', 'source',)
+        
     def __unicode__(self):
         return self.individual_string
 
