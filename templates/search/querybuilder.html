@@ -5,9 +5,8 @@
 <script src="//netdna.bootstrapcdn.com/twitter-bootstrap/2.2.2/js/bootstrap.min.js"></script>
 
 <script type="text/javascript">
-	
 	$(document).ready(function() {
-		
+
 		$('#btnAdd').click(function() {
 			var num = $('.clonedInput').length;
 			// how many "duplicatable" input fields we currently have
@@ -37,29 +36,28 @@
 				var idnum = idarray[1]
 
 				if ($(this).val() == 'message') {
+					$("#where_" + idnum).attr('value', '');
 					$("#where_" + idnum).attr('disabled', true);
-					// remove the current where options
-				} else if ($(this).val() == 'phenotype') {
+					$("#is_" + idnum).prop('value', '');
+					$("#is_" + idnum).attr('disabled', true);
+					$("#querystr_" + idnum).prop('value', '');
+					$("#querystr_" + idnum).prop('disabled', true);
+				} else {
+
+					if ($("#from_" + idnum).val() == 'source' | $("#from_" + idnum).val() == 'sstudy' | $("#from_" + idnum).val() == 'platform') {
+						$("#is_" + idnum).prop('value', '');
+						$("#is_" + idnum).attr('disabled', true);
+						$("#querystr_" + idnum).prop('value', '');
+						$("#querystr_" + idnum).prop('disabled', true);
+					}
+
 					$("#where_" + idnum).attr('disabled', false);
 					var url = "/search/querybuilder/" + $(this).val() + "/all_json_models";
 					var from = $(this).val();
 					$.getJSON(url, function(where) {
 						var options = '<option value="message">Select a filter</option>';
 						for (var i = 0; i < where.length; i++) {
-							// change phenotype_name to "from_value + name"
-							options += '<option value="' + where[i].pk + '">' + where[i].fields['phenotype_name'] + '</option>';
-						}
-						$("#where_" + idnum).html(options);
-					});
-				} else if ($(this).val() == 'source') {
-					$("#where_" + idnum).attr('disabled', false);
-					var url = "/search/querybuilder/" + $(this).val() + "/all_json_models";
-					var from = $(this).val();
-					$.getJSON(url, function(where) {
-						var options = '<option value="message">Select a filter</option>';
-						for (var i = 0; i < where.length; i++) {
-							// change phenotype_name to "from_value + name"
-							options += '<option value="' + where[i].pk + '">' + where[i].fields['source_name'] + '</option>';
+							options += '<option value="' + where[i].pk + '">' + where[i].fields[from + "_name"] + '</option>';
 						}
 						$("#where_" + idnum).html(options);
 					});
@@ -67,14 +65,21 @@
 			});
 
 			$("[id^=where]").change(function() {
+				// get the id number of the menu that changed so that we change the correct search filter
 				var idstr = $(this).attr("id")
 				var idarray = idstr.split("_")
 				var idnum = idarray[1]
 
 				if ($(this).val() == 'message') {
 					$("#is_" + idnum).attr('disabled', true);
+				} else if ($("#from_" + idnum).val() == 'source' | $("#from_" + idnum).val() == 'sstudy' | $("#from_" + idnum).val() == 'platform') {
+					$("#is_" + idnum).prop('value', '');
+					$("#is_" + idnum).attr('disabled', true);
+					$("#querystr_" + idnum).prop('value', '');
+					$("#querystr_" + idnum).prop('disabled', true);
 				} else {
-					var url = "/search/querybuilder/" + $(this).val() + "/all_search_options";
+					$("#is_" + idnum).attr('disabled', false);
+					var url = "/search/querybuilder/" + $("#from_" + idnum).val() + "/" + $(this).val() + "/all_search_options";
 					$.getJSON(url, function(data) {
 						var options = '<option value="message">Select a filter</option>';
 						for (var i = 0; i < data.length; i++) {
@@ -91,7 +96,6 @@
 					});
 				}
 			});
-
 		});
 
 		$('#btnDel').click(function() {
@@ -114,34 +118,32 @@
 			var idnum = idarray[1]
 
 			if ($(this).val() == 'message') {
+				$("#where_" + idnum).attr('value', '');
 				$("#where_" + idnum).attr('disabled', true);
-				// remove the current where options
-			} else if ($(this).val() == 'phenotype') {
+				$("#is_" + idnum).prop('value', '');
+				$("#is_" + idnum).attr('disabled', true);
+				$("#querystr_" + idnum).prop('value', '');
+				$("#querystr_" + idnum).prop('disabled', true);
+			} else {
 				$("#where_" + idnum).attr('disabled', false);
 				var url = "/search/querybuilder/" + $(this).val() + "/all_json_models";
 				var from = $(this).val();
+				if ($("#from_" + idnum).val() == 'source' | $("#from_" + idnum).val() == 'sstudy' | $("#from_" + idnum).val() == 'platform') {
+					$("#is_" + idnum).prop('value', '');
+					$("#is_" + idnum).attr('disabled', true);
+					$("#querystr_" + idnum).prop('value', '');
+					$("#querystr_" + idnum).prop('disabled', true);
+				}
 				$.getJSON(url, function(where) {
 					var options = '<option value="message">Select a filter</option>';
 					for (var i = 0; i < where.length; i++) {
-						// change phenotype_name to "from_value + name"
-						options += '<option value="' + where[i].pk + '">' + where[i].fields['phenotype_name'] + '</option>';
-					}
-					$("#where_" + idnum).html(options);
-				});
-			} else if ($(this).val() == 'source') {
-				$("#where_" + idnum).attr('disabled', false);
-				var url = "/search/querybuilder/" + $(this).val() + "/all_json_models";
-				var from = $(this).val();
-				$.getJSON(url, function(where) {
-					var options = '<option value="message">Select a filter</option>';
-					for (var i = 0; i < where.length; i++) {
-						// change phenotype_name to "from_value + name"
-						options += '<option value="' + where[i].pk + '">' + where[i].fields['source_name'] + '</option>';
+						options += '<option value="' + where[i].pk + '">' + where[i].fields[from + "_name"] + '</option>';
 					}
 					$("#where_" + idnum).html(options);
 				});
 			}
 		});
+
 		// change the search options based on the type of filter
 		$("[id^=where]").change(function() {
 			// get the id number of the menu that changed so that we change the correct search filter
@@ -151,14 +153,14 @@
 
 			if ($(this).val() == 'message') {
 				$("#is_" + idnum).attr('disabled', true);
-			} else if ($("#from_" + idnum).val() == 'source') {
+			} else if ($("#from_" + idnum).val() == 'source' | $("#from_" + idnum).val() == 'study' | $("#from_" + idnum).val() == 'platform') {
 				$("#is_" + idnum).prop('value', '');
 				$("#is_" + idnum).attr('disabled', true);
 				$("#querystr_" + idnum).prop('value', '');
 				$("#querystr_" + idnum).prop('disabled', true);
 			} else {
 				$("#is_" + idnum).attr('disabled', false);
-				var url = "/search/querybuilder/" + $(this).val() + "/all_search_options";
+				var url = "/search/querybuilder/" + $("#from_" + idnum).val() + "/" + $(this).val() + "/all_search_options";
 				$.getJSON(url, function(data) {
 					var options = '<option value="message">Select a filter</option>';
 					for (var i = 0; i < data.length; i++) {
@@ -166,7 +168,7 @@
 					}
 					$("#is_" + idnum).html(options);
 					// if data contains just 4 entries then it is an affection status so does not need a text entry field
-					if (data.length > 4) {												
+					if (data.length > 4) {
 						$("#querystr_" + idnum).prop('disabled', false);
 					} else {
 						$("#querystr_" + idnum).prop('value', '');
@@ -186,19 +188,23 @@
 
 		$('#btnDel').attr('disabled', 'disabled');
 		$('#btnDelOut').attr('disabled', 'disabled');
-	});
+	}); 
 </script>
 {% endblock %}
 
 {% block content %}
 
-	{% if message %}
-		<p class="text-error">{{message}}</p>
-	{% endif %}
-	
-	<p class="lead" style="margin-top: 10px;margin-bottom: 10px">Build a query:</p>
+{% if message %}
+<p class="text-error">
+	{{message}}
+</p>
+{% endif %}
 
-	<form class="form-inline" action="" method="post" enctype="multipart/form-data">
+<p class="lead" style="margin-top: 10px;margin-bottom: 10px">
+	Build a query:
+</p>
+
+<form class="form-inline" action="" method="post" enctype="multipart/form-data">
 
 	{% csrf_token %}
 
@@ -208,23 +214,21 @@
 				<select name="from" id="from_12">
 					<option value="message">Select a filter type</option>
 					<option value="phenotype">Phenotype</option>
-					<option value="source">External source</option>					
-					<!-- <option value="platform">Platform</option> -->
-					<!-- <option value="study">Study</option> -->
-					<!-- <option value="qc">QC</option> -->
+					<option value="source">External source</option>
+					<option value="study">Study</option>
+					<option value="platform">Platform</option>
 				</select>
 				<select name="where" id="where_12"></select>
 				<select name="is" id="is_12"></select>
 				<input type="text" name="querystr" id="querystr_12" />
 				<select name="andor" id="andor_12">
-					<option value="message"></option>
 					<option value="and">AND</option>
 					<option value="or">OR</option>
 				</select>
 			</div>
 		</div>
 	</div>
-	
+
 	<div class = row style="margin-top: 10px;margin-bottom: 10px">
 		<div class="span9">
 			<input type="button" id="btnAdd" value="add another filter" class="btn btn-default btn-success" />
@@ -232,7 +236,9 @@
 		</div>
 	</div>
 
-	<p class="lead" style="margin-top: 30px;margin-bottom: 10px">Select output columns:</p>
+	<p class="lead" style="margin-top: 30px;margin-bottom: 10px">
+		Select output columns:
+	</p>
 	<div class="row" style="margin-top: 10px;margin-bottom: 10px">
 		<div class="span6">
 			<div class="accordion" id="accordion1">
@@ -242,9 +248,15 @@
 					</div>
 					<div id="collapseOne" class="accordion-body collapse in">
 						<div class="accordion-inner">
-							<label class="checkbox inline"><input type="checkbox" name="output" value="IndividualID" checked>Individual ID</label>
-							<label class="checkbox inline"><input type="checkbox" name="output" value="Source">Source</label>
-							<label class="checkbox inline"><input type="checkbox" name="output" value="Sex">Sex</label>
+							<label class="checkbox inline">
+								<input type="checkbox" name="output" value="IndividualID" checked>
+								Individual ID</label>
+							<label class="checkbox inline">
+								<input type="checkbox" name="output" value="Source">
+								Source</label>
+							<label class="checkbox inline">
+								<input type="checkbox" name="output" value="Sex">
+								Sex</label>
 						</div>
 					</div>
 					<div class="accordion-heading">
@@ -252,20 +264,31 @@
 					</div>
 					<div id="collapseTwo" class="accordion-body collapse out">
 						<div class="accordion-inner">
-							<label class="checkbox inline"><input type="checkbox" name="output" value="SampleIDs">Sample IDs</label>
-							<label class="checkbox inline"><input type="checkbox" name="output" value="Studies">Studies</label>
-							<label class="checkbox inline"><input type="checkbox" name="output" value="Platforms">Platforms</label>
-							<label class="checkbox inline"><input type="checkbox" name="output" value="QCs">Sample QCs</label>
+							<label class="checkbox inline">
+								<input type="checkbox" name="output" value="SampleIDs">
+								Sample IDs</label>
+							<label class="checkbox inline">
+								<input type="checkbox" name="output" value="Studies">
+								Studies</label>
+							<label class="checkbox inline">
+								<input type="checkbox" name="output" value="Platforms">
+								Platforms</label>
+							<label class="checkbox inline">
+								<input type="checkbox" name="output" value="QCs">
+								Sample QCs</label>
 						</div>
 					</div>
 					<div class="accordion-heading">
 						<a class="accordion-toggle" data-toggle="collapse" data-target="#collapseThree" href="#"> Phenotype values </a>
 					</div>
 					<div id="collapseThree" class="accordion-body collapse out">
-						<div class="accordion-inner">							
-							{% for phenotype in phenotypes %}            					            					
-            					<label class="checkbox"><input type="checkbox" name="output" value="phenotype:{{phenotype.id}}">{{phenotype.phenotype_name}}</label><br/>
-    						{% endfor %}    																			
+						<div class="accordion-inner">
+							{% for phenotype in phenotypes %}
+							<label class="checkbox">
+								<input type="checkbox" name="output" value="phenotype:{{phenotype.id}}">
+								{{phenotype.phenotype_name}}</label>
+							<br/>
+							{% endfor %}
 						</div>
 					</div>
 				</div>
@@ -273,7 +296,9 @@
 		</div>
 	</div>
 
-	<p class="lead" style="margin-top: 30px;margin-bottom: 10px">Search in:</p>
+	<p class="lead" style="margin-top: 30px;margin-bottom: 10px">
+		Search in:
+	</p>
 	<div class="row" style="margin-top: 10px;margin-bottom: 10px">
 		<div class="span9">
 			<label class="radio">
