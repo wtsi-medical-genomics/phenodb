@@ -55,7 +55,7 @@
 		});
 
 		x.domain(data.map(function(d) {
-			return d.source;
+			return d.value;
 		}));
 		y.domain([0, d3.max(data, function(d) {
 			return d.count;
@@ -63,12 +63,14 @@
 
 		var axis = svg.append("g").attr("class", "x axis").attr("transform", "translate(0," + height + ")").call(xAxis);
 		
-		axis.selectAll("text").attr("transform", function(d) { return "rotate(90)translate(" + this.getBBox().height/2 + "," + this.getBBox().width/2 + ")";});		
+		axis.selectAll("text").attr("transform", function(d) { 
+			return "rotate(90)translate(" + this.getBBox().height/2 + "," + this.getBBox().width/2 + ")";
+			});		
 
 		svg.append("g").attr("class", "y axis").call(yAxis).append("text").attr("transform", "rotate(-90)").attr("y", 6).attr("dy", ".71em").style("text-anchor", "end").text("count");
 
 		svg.selectAll(".bar").data(data).enter().append("rect").attr("class", "bar").attr("x", function(d) {
-			return x(d.source);
+			return x(d.value);
 		}).attr("width", x.rangeBand()).attr("y", function(d) {
 			return y(d.count);
 		}).attr("height", function(d) {
@@ -79,7 +81,7 @@
 
 		var sortTimeout = setTimeout(function() {
 			d3.select("input").property("checked", true).each(change);
-		}, 3000);
+		}, 1000);
 
 		function change() {
 			clearTimeout(sortTimeout);
@@ -88,9 +90,9 @@
 			var x0 = x.domain(data.sort(this.checked ? function(a, b) {
 				return b.count - a.count;
 			} : function(a, b) {
-				return d3.ascending(a.source, b.source);
+				return d3.ascending(a.value, b.value);
 			}).map(function(d) {
-				return d.source;
+				return d.value;
 			})).copy();
 
 			var transition = svg.transition().duration(750), delay = function(d, i) {
@@ -98,7 +100,7 @@
 			};
 
 			transition.selectAll(".bar").delay(delay).attr("x", function(d) {
-				return x0(d.source);
+				return x0(d.value);
 			});
 
 			transition.select(".x.axis").call(xAxis).selectAll("g").delay(delay);
