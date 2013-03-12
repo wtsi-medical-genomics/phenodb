@@ -17,7 +17,10 @@ class BulkUploadForm(forms.ModelForm):
         ('Individuals','Individuals'),
         ('Phenotypes','Phenotypes'),
         ('Samples','Samples'),
-        ('Sources','Sources')
+        ('Sources','Sources'),
+        ('study_samples', 'Study Samples'),
+        ('indid2sample', 'Individual Identifier on Sample ID'),
+        ('add_phenotype_values', 'Add phenotype values to individuals'),
     )
     import_data_type = forms.ChoiceField(import_options)
 
@@ -151,9 +154,22 @@ class BulkUploadAdmin(admin.ModelAdmin):
                         quantVal = QuantitiatvePhenotypeValue()
                         quantVal.phenotype = pheno
                         quantVal.individual = ind
-                        if str.isdigit(line[col]) == False:
-                            continue
-                        quantVal.phenotype_value = Decimal(line[col])                            
+                        ## special case for sex as this often needs to be parsed
+                        if pheno.phenotype_name == "Sex":
+                            if not str.isdigit(line[col]):
+                                if str.lower(line[col]) == "female" or str.lower(line[col]) == "f":
+                                    sex = 2
+                                elif str.lower(line[col]) == "male" or str.lower(line[col]) == "m":
+                                    sex = 1
+                                else:
+                                    sex = 0
+                            else:
+                                sex = line[col]
+                            quantVal.phenotype_value = Decimal(sex)
+                        else:
+                            if str.isdigit(line[col]) == False:
+                                continue
+                            quantVal.phenotype_value = Decimal(line[col])                            
                         quantVal.flagged = False
                         quantVal.date_created = datetime.datetime.now()
                         quantVal.last_updated = datetime.datetime.now()
@@ -269,6 +285,171 @@ class BulkUploadAdmin(admin.ModelAdmin):
 #                   messages.error(request, u"Sample " + sample_id + " is already in the database")
                     continue
                 transaction.commit()
+                
+            elif import_data_type == "study_samples":                
+                ## required columns: Sample ID,Study Name                
+                try:
+                    sample_id = line['Sample ID']     
+                    study_name = line['Study Name']                                   
+                except KeyError:
+                    messages.error(request, u"Input file is missing required column(s) 'Sample ID','Study Name'")
+                    return     
+                
+                try:
+                    sample = Sample.objects.get(sample_id=sample_id)
+                except Sample.DoesNotExist:
+                    messages.error(request, u"Can't find sample in database '" + sample_id + u"'")
+                    continue                
+                
+                try:
+                    study = Study.objects.get(study_name=study_name)
+                except Study.DoesNotExist:
+                    messages.error(request, u"Can't find study in database '" + study_name + u"'")
+                    continue
+                
+                studySample = StudySample()
+                studySample.sample = sample
+                studySample.study = study
+                studySample.date_created = datetime.datetime.now()
+                studySample.last_updated = datetime.datetime.now()                
+                try:
+                    studySample.save()
+                except IntegrityError:
+                    messages.error(request, u"Source " + line['Centre'] + " is already in the database")
+                    continue
+                ##messages.success(request, u"Study sample " + sample_id + u":" + study_name+ u" was added to PhenoDB")
+            
+            elif import_data_type == "indid2sample":
+                ## required columns: Sample ID, Centre, Centre ID
+                try:
+                    sample_id = line['Sample ID']     
+                    centre = line['Centre']
+                    centre_id = line['Centre ID']                                                       
+                except KeyError:
+                    messages.error(request, u"Input file is missing required column(s) 'Sample ID','Centre','Centre ID'")
+                    return
+                
+                try:
+                    sample = Sample.objects.get(sample_id=sample_id)
+                except Sample.DoesNotExist:
+#                    messages.error(request, u"Can't find sample in database '" + sample_id + u"'")
+                    continue 
+                
+                try:
+                    source = Source.objects.get(source_name=centre)
+                except Source.DoesNotExist:
+                    messages.error(request, u"Can't find source in database '" + source + u"'")
+                    continue
+                
+                ## insert the individual identifier
+                indId = IndividualIdentifier()
+                indId.individual = sample.individual
+                indId.individual_string = centre_id                
+                indId.source = source
+                indId.date_created = datetime.datetime.now()
+                indId.last_updated = datetime.datetime.now()                
+                try:
+                    indId.save()
+                except IntegrityError:
+                    messages.error(request, u"Individual ID " + centre_id + " has already been entered in the database for this source")
+                    continue
+            
+            elif import_data_type == "add_phenotype_values":
+                ## required columns: Center, Centre ID, phenotype
+                try:
+                    centre = line['Centre']
+                    centre_id = line['Centre ID']                    
+                except KeyError:
+                    messages.error(request, u"Input file is missing required column(s) 'Centre,Centre ID'")
+                    return
+                try:
+                    source = Source.objects.get(source_name=centre)
+                except Source.DoesNotExist:
+                    messages.error(request, u"Can't find source in database '" + centre + u"'")
+                    continue 
+                
+                ## get the individual
+                try:
+                    sampleIndId = IndividualIdentifier.objects.get(individual_string=centre_id,source_id=source.id)
+                except IndividualIdentifier.DoesNotExist:
+                    messages.error(request, u"Individual " + centre_id + u" NOT found in phenodb")
+                    continue
+                
+                ind = sampleIndId.individual                
+                
+                for col in line:                      
+                    try:   
+                        if len(line[col]) == 0:
+                            continue
+                    except TypeError:
+                        ## vale is None
+                        continue
+                                   
+                    try:
+                        pheno = Phenotype.objects.get(phenotype_name=col)
+                    except Phenotype.DoesNotExist:
+#                        messages.error(request, u"Warning Can't find phenotype '" + col + "' in database")
+                        continue
+                    
+                    if pheno.phenotype_type.phenotype_type == u"Affection Status":
+                        affectVal = AffectionStatusPhenotypeValue()
+                        affectVal.phenotype = pheno
+                        affectVal.individual = ind
+                        if line[col] in BulkUploadAdmin.false_list:
+                            affectVal.phenotype_value = False
+                        elif line[col] in BulkUploadAdmin.true_list:
+                            affectVal.phenotype_value = True
+                        else:
+                            continue
+                        affectVal.flagged = False
+                        affectVal.date_created = datetime.datetime.now()
+                        affectVal.last_updated = datetime.datetime.now()
+                        try:
+                            affectVal.save()
+                        except:
+                            messages.error(request, u"failed to save " + pheno.phenotype_name)           
+                    elif pheno.phenotype_type.phenotype_type == u"Qualitative":
+                        qualVal = QualitativePhenotypeValue()
+                        qualVal.phenotype = pheno
+                        qualVal.individual = ind
+                        qualVal.phenotype_value = line[col].strip()
+                        qualVal.flagged = False
+                        qualVal.date_created = datetime.datetime.now()
+                        qualVal.last_updated = datetime.datetime.now()
+                        try:
+                            qualVal.save()
+                        except:
+                            messages.error(request, u"failed to save " + pheno.phenotype_name)
+                    elif pheno.phenotype_type.phenotype_type == u"Quantitative":
+                        quantVal = QuantitiatvePhenotypeValue()
+                        quantVal.phenotype = pheno
+                        quantVal.individual = ind
+                        ## special case for sex as this often needs to be parsed
+                        if pheno.phenotype_name == "Sex":
+                            if not str.isdigit(line[col]):
+                                if str.lower(line[col]) == "female":
+                                    sex = 2
+                                elif str.lower(line[col]) == "male":
+                                    sex = 1
+                                else:
+                                    sex = 0
+                            else:
+                                sex = line[col]
+                            quantVal.phenotype_value = Decimal(sex)
+                        else:
+                            if str.isdigit(line[col]) == False:
+                                continue
+                            quantVal.phenotype_value = Decimal(line[col])                                                    
+                        quantVal.flagged = False
+                        quantVal.date_created = datetime.datetime.now()
+                        quantVal.last_updated = datetime.datetime.now()
+                        try:
+                            quantVal.save()
+                        except:
+                            messages.error(request, u"failed to save " + pheno.phenotype_name)
+                    else:
+                        messages.error(request, u"unrecognised phenotype type " + pheno.phenotype_type.phenotype_type)
+                
         return
 
 class PlatformAdmin(admin.ModelAdmin):
