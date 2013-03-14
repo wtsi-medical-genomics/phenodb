@@ -34,7 +34,7 @@
 	var margin = {
 		top : 20,
 		right : 20,
-		bottom : 30,
+		bottom : 100,
 		left : 40
 	}, width = 960 - margin.left - margin.right, height = 500 - margin.top - margin.bottom;
 
@@ -63,10 +63,9 @@
 
 		var axis = svg.append("g").attr("class", "x axis").attr("transform", "translate(0," + height + ")").call(xAxis);
 		
-		axis.selectAll("text").attr("transform", function(d) { 
-			return "rotate(90)translate(" + this.getBBox().height/2 + "," + this.getBBox().width/2 + ")";
-			});		
-
+		//axis.selectAll("text").attr("transform", function(d) { return "rotate(90)translate(" + this.getBBox().height/2 + "," + this.getBBox().width/2 + ")";});		
+		axis.selectAll("text").attr("transform", function(d) { return "rotate(90)translate(" + (this.getBBox().height/2+40)  + "," + (this.getBBox().width/2-40) + ")";});	
+		
 		svg.append("g").attr("class", "y axis").call(yAxis).append("text").attr("transform", "rotate(-90)").attr("y", 6).attr("dy", ".71em").style("text-anchor", "end").text("count");
 
 		svg.selectAll(".bar").data(data).enter().append("rect").attr("class", "bar").attr("x", function(d) {
