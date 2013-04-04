@@ -212,26 +212,26 @@ class AdminTest(TestCase):
 #        self.client.post('/admin/search/bulkupload/add/', {'import_data_type': 'study_samples', 'file_to_import':studyfh})
 #        self.assertEqual(StudySample.objects.all().count(), 7)
 #    
-#    def test_add_individualIdentifier_on_sampleID(self):
-#        
-#        self.client.login(username='test', password='testy')
-#        
-#        ## open a test input files
-#        indfh = open('/Users/jm20/work/workspace/phenodb/data/test_individual_input.csv', 'r')
-#        samplefh = open('/Users/jm20/work/workspace/phenodb/data/test_individual_input.csv', 'r')
-#        ## load individuals
-#        self.client.post('/admin/search/bulkupload/add/', {'import_data_type': 'Individuals', 'file_to_import':indfh})
-#        ## load samples
-#        self.client.post('/admin/search/bulkupload/add/', {'import_data_type': 'Samples', 'file_to_import':samplefh})
-#
-#        indid2samplefh = open('/Users/jm20/work/workspace/phenodb/data/test_individualIdentifier_to_sampleID.csv', 'r')
-#        ## load samples
-#        print self.client.post('/admin/search/bulkupload/add/', {'import_data_type': 'indid2sample', 'file_to_import':indid2samplefh})
-#        self.assertEqual(IndividualIdentifier.objects.all().count(), 17)
+    def test_add_new_sampleID_on_sampleID(self):
+        
+        self.client.login(username='test', password='testy')
+        
+        ## open a test input files
+        indfh = open('/Users/jm20/work/workspace/phenodb/data/test_individual_input.csv', 'r')
+        samplefh = open('/Users/jm20/work/workspace/phenodb/data/test_individual_input.csv', 'r')
+        ## load individuals
+        self.client.post('/admin/search/bulkupload/add/', {'import_data_type': 'Individuals', 'file_to_import':indfh})
+        ## load samples
+        self.client.post('/admin/search/bulkupload/add/', {'import_data_type': 'Samples', 'file_to_import':samplefh})
+
+        indid2samplefh = open('/Users/jm20/work/workspace/phenodb/data/test_add_new_sampleID_on_sampleID.csv', 'r')
+        ## load samples
+        print self.client.post('/admin/search/bulkupload/add/', {'import_data_type': 'add_sample_on_sample', 'file_to_import':indid2samplefh})
+        self.assertEqual(Sample.objects.all().count(), 17)
         
     def test_bulkadd_phenotype_to_individual(self):
         
-        ## test that you can bulk upload a file of phenotypes for existing individuals
+        ## test that you can bulk upload a file of new/updated phenotypes for existing individuals
         ## centre and centre id or phenodbid?
                 
         ## add a new phenotype to match test file
@@ -264,10 +264,27 @@ class AdminTest(TestCase):
         self.assertEqual(QuantitiatvePhenotypeValue.objects.get(phenotype__phenotype_name="Test", individual=ind3).phenotype_value, 2)
         self.assertEqual(QuantitiatvePhenotypeValue.objects.get(phenotype__phenotype_name="Test", individual=ind4).phenotype_value, 3)
         self.assertEqual(QuantitiatvePhenotypeValue.objects.get(phenotype__phenotype_name="Test", individual=ind5).phenotype_value, 0)
-
-
         
-
+        ## test if existing affection status phenotypes are updated
+        self.assertEqual(AffectionStatusPhenotypeValue.objects.get(phenotype__phenotype_name="IBD affection status", individual=ind1).phenotype_value, 0)
+        self.assertEqual(AffectionStatusPhenotypeValue.objects.get(phenotype__phenotype_name="IBD affection status", individual=ind2).phenotype_value, 0)
+        self.assertEqual(AffectionStatusPhenotypeValue.objects.get(phenotype__phenotype_name="IBD affection status", individual=ind3).phenotype_value, 0)
+        self.assertEqual(AffectionStatusPhenotypeValue.objects.get(phenotype__phenotype_name="IBD affection status", individual=ind4).phenotype_value, 0)
+        self.assertEqual(AffectionStatusPhenotypeValue.objects.get(phenotype__phenotype_name="IBD affection status", individual=ind5).phenotype_value, 0)
+        
+        ## test if existing qualitative phenotypes are updated
+        self.assertEqual(QualitativePhenotypeValue.objects.get(phenotype__phenotype_name="Disease type", individual=ind1).phenotype_value, "test")
+        self.assertEqual(QualitativePhenotypeValue.objects.get(phenotype__phenotype_name="Disease type", individual=ind2).phenotype_value, "test")
+        self.assertEqual(QualitativePhenotypeValue.objects.get(phenotype__phenotype_name="Disease type", individual=ind3).phenotype_value, "test")
+        self.assertEqual(QualitativePhenotypeValue.objects.get(phenotype__phenotype_name="Disease type", individual=ind4).phenotype_value, "test")
+        self.assertEqual(QualitativePhenotypeValue.objects.get(phenotype__phenotype_name="Disease type", individual=ind5).phenotype_value, "test")
+        
+        ## test if existing quantitative phenotypes are updated
+        self.assertEqual(QuantitiatvePhenotypeValue.objects.get(phenotype__phenotype_name="Sex", individual=ind1).phenotype_value, 0)
+        self.assertEqual(QuantitiatvePhenotypeValue.objects.get(phenotype__phenotype_name="Sex", individual=ind2).phenotype_value, 0)
+        self.assertEqual(QuantitiatvePhenotypeValue.objects.get(phenotype__phenotype_name="Sex", individual=ind3).phenotype_value, 0)
+        self.assertEqual(QuantitiatvePhenotypeValue.objects.get(phenotype__phenotype_name="Sex", individual=ind4).phenotype_value, 0)
+        self.assertEqual(QuantitiatvePhenotypeValue.objects.get(phenotype__phenotype_name="Sex", individual=ind5).phenotype_value, 0)
 
         
         
