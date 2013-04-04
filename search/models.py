@@ -64,6 +64,9 @@ class AffectionStatusPhenotypeValue(models.Model):
     last_updated = models.DateTimeField()
     ## phenotype.db_index = True
     
+    class Meta:
+        unique_together = ('phenotype', 'individual',)
+    
     def __unicode__(self):
         return self.phenotype_value
     
@@ -75,6 +78,9 @@ class QualitativePhenotypeValue(models.Model):
     date_created = models.DateTimeField()
     last_updated = models.DateTimeField()
     
+    class Meta:
+        unique_together = ('phenotype', 'individual',)
+    
     def __unicode__(self):
         return self.phenotype_value
 
@@ -85,6 +91,9 @@ class QuantitiatvePhenotypeValue(models.Model):
     flagged = models.BooleanField() 
     date_created = models.DateTimeField()
     last_updated = models.DateTimeField()
+    
+    class Meta:
+        unique_together = ('phenotype', 'individual',)
     
     def __unicode__(self):
         return self.phenotype_value
