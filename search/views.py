@@ -217,13 +217,9 @@ def querybuilder(request):
         output    = request.POST.getlist('output')
         search_in = request.POST.get('searchIn')
         page      = request.GET.get('page')
-#        andors    = request.POST.getlist('andor')
+        andors    = request.POST.getlist('andor')
                 
-        ## check that all the queries contain something for each required field 
-        if len(where_iss) == 0 | all(where_iss) is False | len(wheres) == 0 | all(wheres) is False | len(tables) == 0 | all(tables) is False:
-            message = "Query form contains missing information, please complete all fields and try again."
-            return render(request, 'search/querybuilder.html', {'phenotypes':Phenotype.objects.all(),'message':message})
-        elif len(output) == 0:
+        if len(output) == 0:
             message = "No output columns selected, please select output columns and try again."
             return render(request, 'search/querybuilder.html', {'phenotypes':Phenotype.objects.all(),'message':message})
         else:
@@ -234,7 +230,8 @@ def querybuilder(request):
             request.session['querystrs'] = list(querystrs)       
             request.session['search_in'] = list(search_in)       
             request.session['output']    = list(output)
-            request.session['search_in'] = search_in            
+            request.session['search_in'] = search_in
+            request.session['andors']    = list(andors)            
             
             ## search all records or from a list of individuals
             if search_in == 'userlist':
@@ -266,7 +263,7 @@ def querybuilder(request):
                             db_ids.append(query_result[0])
                                                         
                     if len(db_ids) > 0:
-                        results = perform_queries_with_ids(request, tables, wheres, where_iss, querystrs, db_ids)
+                        results = perform_queries_with_ids(request, tables, wheres, where_iss, querystrs, db_ids, andors)
                         result_ids = results[0]
                         query_summary = results[1]
                         request.session['user_ids'] = list(db_ids)
@@ -286,14 +283,18 @@ def querybuilder(request):
                 ## allow the users to just supply the list of inds and a null filter
                                 
             elif search_in ==  'all':
-                query_results = perform_queries(request, tables, wheres, where_iss, querystrs)
-                result_ids = query_results[0]
-                query_summary = query_results[1] 
-                if len(result_ids) > 0:
-                    table = generate_results_table(result_ids, results_per_page, page, output)
-                    return render(request, 'search/queryresults.html', {'tablehtml': table[0], 'page_results':table[1], 'count':len(result_ids), 'query_summary':query_summary, 'results_per_page':results_per_page})
+                query_results = perform_queries(request, tables, wheres, where_iss, querystrs, andors)
+                if query_results is not None:
+                    result_ids = query_results[0]
+                    query_summary = query_results[1] 
+                    if len(result_ids) > 0:
+                        table = generate_results_table(result_ids, results_per_page, page, output)
+                        return render(request, 'search/queryresults.html', {'tablehtml': table[0], 'page_results':table[1], 'count':len(result_ids), 'query_summary':query_summary, 'results_per_page':results_per_page})
+                    else:
+                        message = "Sorry your query didn't return any results, please try another query."
+                        return render(request, 'search/querybuilder.html', {'phenotypes':Phenotype.objects.all(),'message':message})
                 else:
-                    message = "Sorry your query didn't return any results, please try another query."
+                    message = "Query form contains missing information, please complete all required fields and try again."
                     return render(request, 'search/querybuilder.html', {'phenotypes':Phenotype.objects.all(),'message':message})
     else:
         # pass all the phenotypes/platforms/studies etc to the form                 
@@ -307,6 +308,7 @@ def querypage(request, page, results_per_page):
     querystrs = request.session.get('search_in')
     output = request.session.get('output')
     search_in = request.session.get('search_in')
+    andors    = request.session.get('andors')
     
     if search_in == 'userlist':
         db_ids = request.session.get('user_ids')
@@ -315,7 +317,7 @@ def querypage(request, page, results_per_page):
         query_summary = results[1]
         
     elif search_in ==  'all':
-        query_results = perform_queries(request, tables, wheres, where_iss, querystrs)
+        query_results = perform_queries(request, tables, wheres, where_iss, querystrs, andors)
         result_ids = query_results[0]
         query_summary = query_results[1]
     
@@ -352,7 +354,7 @@ def query_export(request):
     
     return response
 
-def query_db(table, where, where_is, querystr, last_query):
+def query_db(table, where, where_is, querystr, last_query, andor):
     
     if table == 'phenotype':
         phenotype = Phenotype.objects.get(id=where)            
@@ -401,11 +403,18 @@ def query_db(table, where, where_is, querystr, last_query):
         result_set = StudySample.objects.filter(study=where).values_list('sample_id')
     elif table == 'platform':
         result_set = StudySample.objects.filter(study__platform=where).values_list('sample_id')
-        
+    
+    print result_set.count
+    
     if last_query is not None:
         if result_set.count() > 0:
-            intersection_set = set(list(last_query)).intersection(set(list(result_set)))
-            return list(intersection_set)
+            
+            if andor == "and":
+                intersection_set = set(list(last_query)).intersection(set(list(result_set)))
+                return list(intersection_set)
+            elif andor == "or":
+                union_set = set(list(last_query)).union(set(list(result_set)))
+                return list(union_set)
         else:   
             return None
     else:
@@ -507,10 +516,15 @@ def get_output_data(page_results, output_columns):
     
     return parsed_results
     
-def perform_queries(request, tables, wheres, where_iss, querystrs):
-    ## perform the first query:        
-    table = tables.pop()        
+def perform_queries(request, tables, wheres, where_iss, querystrs, andors):
+    ## perform the first query: 
+    table = tables.pop()
+    if table == 'message':
+        return None
     where = wheres.pop()
+    if where == 'message':
+        return None
+    andor = andors.pop()
     
     if table == 'source' or table == 'study' or table == 'platform':
         where_is = ''
@@ -524,7 +538,9 @@ def perform_queries(request, tables, wheres, where_iss, querystrs):
             query_summary = ["FROM platform " + Platform.objects.get(id=where).platform_name]
         
     elif table == 'phenotype':
-        where_is = where_iss.pop()                                
+        where_is = where_iss.pop()
+        if where_is == 'message':
+            return None 
         phenotype = Phenotype.objects.get(id=where)
         phenotype_type = phenotype.phenotype_type.phenotype_type
                                             
@@ -535,12 +551,13 @@ def perform_queries(request, tables, wheres, where_iss, querystrs):
         
         query_summary = ["FROM phenotype WHERE " + Phenotype.objects.get(id=where).phenotype_name + " " + where_is + " " + querystr]
                     
-    query_results = query_db(table, where, where_is, querystr, None)
+    query_results = query_db(table, where, where_is, querystr, None, andor)
     
     ## if there are more queries then perform them on the ids returned from the first query
     while len(tables) > 0:
         table = tables.pop()
         where = wheres.pop()
+        andor = andors.pop()
         
         if table == 'source' or table == 'study' or table == 'platform':
             where_is = ''
@@ -566,39 +583,53 @@ def perform_queries(request, tables, wheres, where_iss, querystrs):
             query_string = "FROM phenotype WHERE " + Phenotype.objects.get(id=where).phenotype_name + " " + where_is + " " + querystr
                                                 
         if len(query_results) > 0:
-            query_results = query_db(table, where, where_is, querystr, query_results)
+            query_results = query_db(table, where, where_is, querystr, query_results, andor)
             query_summary.append(query_string)
         else: 
             message = "Sorry your query didn't return any results, please try another query."
             return render(request, 'search/querybuilder.html', {'phenotypes':Phenotype.objects.all(),'message':message})
     return query_results, query_summary
 
-def perform_queries_with_ids(request, tables, wheres, where_iss, querystrs, query_results):
+def perform_queries_with_ids(request, tables, wheres, where_iss, querystrs, query_results, andors):
     
     query_summary = []
     
     while len(tables) > 0:
+        ## perform the first query: 
         table = tables.pop()
+        if table == 'message':
+            return None
         where = wheres.pop()
+        if where == 'message':
+            return None
+        andor = andors.pop()
         
-        if table == 'source':
-#       there is no where_is value for a source query
+        if table == 'source' or table == 'study' or table == 'platform':
             where_is = ''
-        else:
-            where_is = where_iss.pop() 
-                
-        phenotype = Phenotype.objects.get(id=where)
-        phenotype_type = phenotype.phenotype_type.phenotype_type
-                            
-        if phenotype_type == 'Affection Status' or table == 'source':
             querystr = ''
-        else:
-            querystr = querystrs.pop().strip()
-            
+        
+            if table == 'source':
+                query_summary = ["FROM source " + Source.objects.get(id=where).source_name]
+            elif table == 'study':
+                query_summary = ["FROM study " + Study.objects.get(id=where).study_name]
+            elif table == 'platform':
+                query_summary = ["FROM platform " + Platform.objects.get(id=where).platform_name]
+        
+        elif table == 'phenotype':
+            where_is = where_iss.pop()                                
+            phenotype = Phenotype.objects.get(id=where)
+            phenotype_type = phenotype.phenotype_type.phenotype_type
+                                            
+            if phenotype_type == 'Affection Status':
+                querystr = ''
+            else:
+                querystr = querystrs.pop().strip()
+        
+            query_string = "FROM phenotype WHERE " + Phenotype.objects.get(id=where).phenotype_name + " " + where_is + " " + querystr            
                                         
         if len(query_results) > 0:
-            query_results = query_db(table, where, where_is, querystr, query_results)
-            query_summary.append("+ FROM " + table + " WHERE " + Phenotype.objects.get(id=where).phenotype_name + " " + where_is + " " + querystr)
+            query_results = query_db(table, where, where_is, querystr, query_results, andor)
+            query_summary.append(query_string)
         else: 
             message = "Sorry your query didn't return any results, please try another query."
             return render(request, 'search/querybuilder.html', {'phenotypes':Phenotype.objects.all(),'message':message})
