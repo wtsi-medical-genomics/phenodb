@@ -225,7 +225,7 @@ class AdminTest(TestCase):
 
         indid2samplefh = open('/Users/jm20/work/workspace/phenodb/data/test_add_new_sampleID_on_sampleID.csv', 'r')
         ## load samples
-        print self.client.post('/admin/search/bulkupload/add/', {'import_data_type': 'add_sample_on_sample', 'file_to_import':indid2samplefh})
+        self.client.post('/admin/search/bulkupload/add/', {'import_data_type': 'add_sample_on_sample', 'file_to_import':indid2samplefh})
         self.assertEqual(Sample.objects.all().count(), 17)
         
     def test_bulkadd_phenotype_to_individual(self):
@@ -247,7 +247,7 @@ class AdminTest(TestCase):
         
         ## open test input file
         fh = open('/Users/jm20/work/workspace/phenodb/data/test_add_phenotype.csv', 'r')
-        print self.client.post('/admin/search/bulkupload/add/', {'import_data_type': 'add_phenotype_values', 'file_to_import':fh})
+        self.client.post('/admin/search/bulkupload/add/', {'import_data_type': 'add_phenotype_values', 'file_to_import':fh})
         
         self.assertEqual(QuantitiatvePhenotypeValue.objects.filter(phenotype__phenotype_name="Test").count(), 5)
         
