@@ -60,7 +60,6 @@ class AdminTest(TestCase):
         self.assertEqual(QualitativePhenotypeValue.objects.get(individual=inds[0],phenotype__phenotype_name="Race").phenotype_value, "White")
         self.assertEqual(QualitativePhenotypeValue.objects.get(individual=inds[0],phenotype__phenotype_name="Smoking status").phenotype_value, "No")
         
-        
         self.assertEqual(inds[1].active_id, None)
         self.assertEqual(IndividualIdentifier.objects.get(individual = inds[1]).individual_string, "84")
         self.assertEqual(IndividualIdentifier.objects.get(individual = inds[1]).source.source_name, "OXFORD")
@@ -173,45 +172,45 @@ class AdminTest(TestCase):
         with self.assertRaises(IntegrityError):
             indId2.save()
 
-#    def test_sample_upload(self):
-#        
-#        self.client.login(username='test', password='testy')
-#                
-#        ## open a test input files
-#        indfh = open('/Users/jm20/work/workspace/phenodb/data/test_individual_input.csv', 'r')
-#        samplefh = open('/Users/jm20/work/workspace/phenodb/data/test_individual_input.csv', 'r')
-#        ## load individuals
-#        self.client.post('/admin/search/bulkupload/add/', {'import_data_type': 'Individuals', 'file_to_import':indfh})
-#        ## load samples
-#        self.client.post('/admin/search/bulkupload/add/', {'import_data_type': 'Samples', 'file_to_import':samplefh})
-#        
-#        samples = Sample.objects.all()
-#        self.assertEqual(samples.count(), 8)
-#        ## check the id and the ind id of some samples
-#        self.assertEqual(samples[0].sample_id, "UC179853")
-#        self.assertEqual(samples[0].individual.id, 1)
-#        self.assertEqual(samples[1].sample_id, "UC180181")
-#        self.assertEqual(samples[1].individual.id, 2)
-#        self.assertEqual(samples[7].sample_id, "UC179849")
-#        self.assertEqual(samples[7].individual.id, 8)
-#        
-#    def test_samplestudy_upload(self):    
-#        
-#        self.client.login(username='test', password='testy')
-#        
-#        ## open a test input files
-#        indfh = open('/Users/jm20/work/workspace/phenodb/data/test_individual_input.csv', 'r')
-#        samplefh = open('/Users/jm20/work/workspace/phenodb/data/test_individual_input.csv', 'r')
-#        ## load individuals
-#        self.client.post('/admin/search/bulkupload/add/', {'import_data_type': 'Individuals', 'file_to_import':indfh})
-#        ## load samples
-#        self.client.post('/admin/search/bulkupload/add/', {'import_data_type': 'Samples', 'file_to_import':samplefh})
-#
-#        studyfh = open('/Users/jm20/work/workspace/phenodb/data/test_sample_study.csv', 'r')
-#        ## load samples
-#        self.client.post('/admin/search/bulkupload/add/', {'import_data_type': 'study_samples', 'file_to_import':studyfh})
-#        self.assertEqual(StudySample.objects.all().count(), 7)
-#    
+    def test_sample_upload(self):
+        
+        self.client.login(username='test', password='testy')
+                
+        ## open a test input files
+        indfh = open('/Users/jm20/work/workspace/phenodb/data/test_individual_input.csv', 'r')
+        samplefh = open('/Users/jm20/work/workspace/phenodb/data/test_individual_input.csv', 'r')
+        ## load individuals
+        self.client.post('/admin/search/bulkupload/add/', {'import_data_type': 'Individuals', 'file_to_import':indfh})
+        ## load samples
+        self.client.post('/admin/search/bulkupload/add/', {'import_data_type': 'Samples', 'file_to_import':samplefh})
+        
+        samples = Sample.objects.all()
+        self.assertEqual(samples.count(), 8)
+        ## check the id and the ind id of some samples
+        self.assertEqual(samples[0].sample_id, "UC179853")
+        self.assertEqual(samples[0].individual.id, 1)
+        self.assertEqual(samples[1].sample_id, "UC180181")
+        self.assertEqual(samples[1].individual.id, 2)
+        self.assertEqual(samples[7].sample_id, "UC179849")
+        self.assertEqual(samples[7].individual.id, 8)
+        
+    def test_samplestudy_upload(self):    
+        
+        self.client.login(username='test', password='testy')
+        
+        ## open a test input files
+        indfh = open('/Users/jm20/work/workspace/phenodb/data/test_individual_input.csv', 'r')
+        samplefh = open('/Users/jm20/work/workspace/phenodb/data/test_individual_input.csv', 'r')
+        ## load individuals
+        self.client.post('/admin/search/bulkupload/add/', {'import_data_type': 'Individuals', 'file_to_import':indfh})
+        ## load samples
+        self.client.post('/admin/search/bulkupload/add/', {'import_data_type': 'Samples', 'file_to_import':samplefh})
+
+        studyfh = open('/Users/jm20/work/workspace/phenodb/data/test_sample_study.csv', 'r')
+        ## load samples
+        self.client.post('/admin/search/bulkupload/add/', {'import_data_type': 'study_samples', 'file_to_import':studyfh})
+        self.assertEqual(StudySample.objects.all().count(), 7)
+    
     def test_add_new_sampleID_on_sampleID(self):
         
         self.client.login(username='test', password='testy')
@@ -285,7 +284,5 @@ class AdminTest(TestCase):
         self.assertEqual(QuantitiatvePhenotypeValue.objects.get(phenotype__phenotype_name="Sex", individual=ind3).phenotype_value, 0)
         self.assertEqual(QuantitiatvePhenotypeValue.objects.get(phenotype__phenotype_name="Sex", individual=ind4).phenotype_value, 0)
         self.assertEqual(QuantitiatvePhenotypeValue.objects.get(phenotype__phenotype_name="Sex", individual=ind5).phenotype_value, 0)
-
-        
         
         
