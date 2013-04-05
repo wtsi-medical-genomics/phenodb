@@ -7,7 +7,7 @@ import datetime
 import csv
 from django.db import connections
 from decimal import *
-from django.db import IntegrityError
+from django.db import IntegrityError, DatabaseError
 from django.contrib import messages
 from django.db import transaction
 
@@ -258,32 +258,38 @@ class BulkUploadAdmin(admin.ModelAdmin):
                 sample.date_created = datetime.datetime.now()
                 sample.last_updated = datetime.datetime.now()
                 
-#                warehouseCursor.execute("SELECT DISTINCT sanger_sample_id, supplier_name, gender FROM samples WHERE name = %s ORDER BY checked_at desc", sample.sample_id)
-#                row = warehouseCursor.fetchone()
-#                if row is None:
-#                    messages.error(request, u"Sample " + sample.sample_id + u" NOT found in warehouse")
-#                    continue
-#                if row[0] is None:
-#                    messages.error(request, u"Sample " + sample.sample_id + u" NOT found in warehouse")
-#                    continue  
-#                if row[1] != sampleIndId.individual_string:
-#                    messages.error(request, u"supplier name " + str(sampleIndId.individual_string) + u" does not match warehouse "  + row[1])
-#                    try:
-#                        source = Source.objects.get(source_name=centre)
-#                    except Source.DoesNotExist:
-#                        continue
-#                    ## insert the new individual identifier
-#                    indId = IndividualIdentifier()
-#                    indId.individual = sampleIndId.individual
-#                    indId.individual_string = row[1]
-#                    indId.source = source
-#                    indId.date_created = datetime.datetime.now()
-#                    indId.last_updated = datetime.datetime.now()
-#                    try:
-#                        indId.save()
-#                    except IntegrityError:
-#                        messages.error(request, u"Individual ID " + row[1] + " is already in the database")
-#                        continue                                                               
+                
+                ## if the sanger warehouse is not available then skip this step and warn the user
+                try: 
+                    warehouseCursor.execute("SELECT DISTINCT sanger_sample_id, supplier_name, gender FROM samples WHERE name = %s ORDER BY checked_at desc", sample.sample_id)
+                    row = warehouseCursor.fetchone()
+                    if row is None:
+                        messages.error(request, u"Sample " + sample.sample_id + u" NOT found in warehouse")
+                        continue
+                    if row[0] is None:
+                        messages.error(request, u"Sample " + sample.sample_id + u" NOT found in warehouse")
+                        continue  
+                    if row[1] != sampleIndId.individual_string:
+                        messages.error(request, u"supplier name " + str(sampleIndId.individual_string) + u" does not match warehouse "  + row[1])
+                        try:
+                            source = Source.objects.get(source_name=centre)
+                        except Source.DoesNotExist:
+                            continue
+                        ## insert the new individual identifier
+                        indId = IndividualIdentifier()
+                        indId.individual = sampleIndId.individual
+                        indId.individual_string = row[1]
+                        indId.source = source
+                        indId.date_created = datetime.datetime.now()
+                        indId.last_updated = datetime.datetime.now()
+                        try:
+                            indId.save()
+                        except IntegrityError:
+                            messages.error(request, u"Individual ID " + row[1] + " is already in the database")
+                            continue
+                except DatabaseError:
+                    messages.error(request, u"Can't connect to warehouse database")                    
+                                                                                                           
                 try:
                     sample.save()
                 except IntegrityError:
