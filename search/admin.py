@@ -2,8 +2,6 @@ from django import forms
 from search.models import *
 from django.contrib import admin
 import datetime
-# django 1.4 only
-# from django.utils.timezone import utc
 import csv
 from django.db import connections
 from decimal import *
