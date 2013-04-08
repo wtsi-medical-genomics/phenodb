@@ -34,11 +34,8 @@ def showCollections(request):
     return render(request, 'search/dataview.html', {'table': table})
 
 def showPhenotypes(request):
-    
     phenotypes = Phenotype.objects.all()
-    
     phenotype_values = []
-    
     for phenotype in phenotypes:
         values_str = ""
         if phenotype.phenotype_type.phenotype_type == 'Affection Status':
@@ -65,9 +62,7 @@ def showPhenotypes(request):
             else:
                 values_list = "" 
             not_null_total = QuantitiatvePhenotypeValue.objects.filter(phenotype_id=phenotype.id, phenotype_value__isnull=False).values('phenotype_value').count()
-        
-        phenotype_values.append({'phenotype_id':phenotype.id, 'phenotype_name':phenotype.phenotype_name, 'description':phenotype.phenotype_description, 'values':values_str, 'total_records': not_null_total})
-    
+        phenotype_values.append({'phenotype_id':phenotype.id, 'phenotype_name':phenotype.phenotype_name, 'description':phenotype.phenotype_description, 'values':values_str, 'total_records': not_null_total})    
     table = PhenotypeTable(phenotype_values)
     
     return render(request, 'search/dataview.html', {'table': table})
@@ -190,8 +185,7 @@ def all_search_options(request, menuid, menuval):
 
 def generate_html_table(output, query_results):
     table_html = "<table class=\"table table-striped table-bordered\">\n"
-    for column in output:
-        
+    for column in output:    
         ## if the column is a phenotype then get the phenotype name from the id
         if str(column).startswith("phenotype"):               
             phenotype_id = column.split(":")[1] 
@@ -238,40 +232,75 @@ def querybuilder(request):
                 user_ids = []                
                 if request.POST.get('individual_list'):
                     textarea_values = request.POST.get('individual_list').splitlines()
+                    
+                    ## to start with lets assume if the line contains two values they are source_id and source
+                    ## if the line contains one value then this is a phenodbid
+                    
                     for line in textarea_values:
-                        if (line.strip()):
-                            user_ids.append(line.strip())
-                                                
+                        if (line.split()):
+                            line_vals = str.split(str(line.strip()))
+                            if len(line_vals) == 1:
+                                user_ids.append([line_vals[0]])
+                            elif len(line_vals) == 2:
+                                ## assume source_id source format to start with
+                                user_ids.append([line_vals[0],line_vals[1]])
+                            else:
+                                message = "Sorry the format of your individual list has not been recognised"
+                                return render(request, 'search/querybuilder.html', {'phenotypes':Phenotype.objects.all(),'message':message})
+                                                                                
                 elif request.FILES.get('individual_file'):
                     indFile = request.FILES.get('individual_file')                    
                     if not indFile.multiple_chunks():
                         file_lines = indFile.read().splitlines()                        
                         for line in file_lines:
-                            if (line.strip()):
-                                user_ids.append(line.strip())                                    
+                            if (line.split()):
+                                line_vals = str.split(str(line.strip()))
+                                if len(line_vals) == 1:
+                                    user_ids.append([line_vals[0]])
+                                elif len(line_vals) == 2:
+                                    ## assume source_id source format to start with
+                                    user_ids.append([line_vals[0],line_vals[1]])
+                                else:
+                                    message = "Sorry the format of your individual list has not been recognised"
+                                    return render(request, 'search/querybuilder.html', {'phenotypes':Phenotype.objects.all(),'message':message})                                    
                     else:
                         message = "Sorry your file '" + indFile.name + "' is too large to read into memory."
-                        return render(request, 'search/querybuilder.html', {'phenotypes':Phenotype.objects.all(),'message':message})                    
-                                
+                        return render(request, 'search/querybuilder.html', {'phenotypes':Phenotype.objects.all(),'message':message})                                           
+    
                 if len(user_ids) > 0:                    
                     # array of tuples
                     db_ids = []                
-                    for user_id in user_ids:                                                
-                        query_result = IndividualIdentifier.objects.filter(individual_string=user_id).values_list('individual_id')                        
-                        if (len(query_result) > 0):
-                            # append just the first tuple of the list !?!?
-                            db_ids.append(query_result[0])
-                                                        
+                    for user_id in user_ids:
+                        if len(user_id) == 1:
+                            try:
+                                query_result = PhenodbIdentifier.objects.get(phenodb_id=user_id[0])
+                            except PhenodbIdentifier.DoesNotExist:
+                                continue
+                        elif len(user_id) == 2:
+                            try:
+                                query_result = IndividualIdentifier.objects.get(individual_string=user_id[0], source__source_name=user_id[1])
+                            except IndividualIdentifier.DoesNotExist:
+                                continue                         
+                            
+                        ## the individuals need to be in tuples to match the queryset results 
+                        individual_tuple = query_result.individual_id,      
+                        db_ids.append(individual_tuple)
+                    
                     if len(db_ids) > 0:
-                        results = perform_queries_with_ids(request, tables, wheres, where_iss, querystrs, db_ids, andors)
-                        result_ids = results[0]
-                        query_summary = results[1]
-                        request.session['user_ids'] = list(db_ids)
-                        if len(result_ids) > 0:
-                            table = generate_results_table(result_ids, results_per_page, page, output)
-                            return render(request, 'search/queryresults.html', {'tablehtml': table[0], 'page_results':table[1], 'count':len(result_ids), 'query_summary':query_summary, 'results_per_page':results_per_page})
+                        
+                        query_results = perform_queries_with_ids(request, tables, wheres, where_iss, querystrs, db_ids, andors)
+                        if query_results is not None:
+                            result_ids = query_results[0]
+                            query_summary = query_results[1]
+                            request.session['user_ids'] = list(db_ids)
+                            if len(result_ids) > 0:
+                                table = generate_results_table(result_ids, results_per_page, page, output)
+                                return render(request, 'search/queryresults.html', {'tablehtml': table[0], 'page_results':table[1], 'count':len(result_ids), 'query_summary':query_summary, 'results_per_page':results_per_page})
+                            else:
+                                message = "Sorry your query didn't return any results, please try another query."
+                                return render(request, 'search/querybuilder.html', {'phenotypes':Phenotype.objects.all(),'message':message})
                         else:
-                            message = "Sorry your query didn't return any results, please try another query."
+                            message = "Query form contains missing information, please complete all required fields and try again."
                             return render(request, 'search/querybuilder.html', {'phenotypes':Phenotype.objects.all(),'message':message})
                     else:
                         message = "Sorry none of the individual IDs you provided could be found, please try again."
@@ -279,8 +308,6 @@ def querybuilder(request):
                 else:
                     message = "No individual IDs were input, please try again."
                     return render(request, 'search/querybuilder.html', {'phenotypes':Phenotype.objects.all(),'message':message})
-                
-                ## allow the users to just supply the list of inds and a null filter
                                 
             elif search_in ==  'all':
                 query_results = perform_queries(request, tables, wheres, where_iss, querystrs, andors)
@@ -297,7 +324,7 @@ def querybuilder(request):
                     message = "Query form contains missing information, please complete all required fields and try again."
                     return render(request, 'search/querybuilder.html', {'phenotypes':Phenotype.objects.all(),'message':message})
     else:
-        # pass all the phenotypes/platforms/studies etc to the form                 
+        # pass all the phenotypes to the form to create the output options                 
         return render(request, 'search/querybuilder.html', {'phenotypes':Phenotype.objects.all()})
         
 def querypage(request, page, results_per_page):
@@ -400,15 +427,12 @@ def query_db(table, where, where_is, querystr, last_query, andor):
     elif table == 'source':
         result_set = IndividualIdentifier.objects.filter(source=where).values_list('individual_id')
     elif table == 'study':
-        result_set = StudySample.objects.filter(study=where).values_list('sample_id')
+        result_set = Sample.objects.filter(studysample__study=where).values_list('individual_id')
     elif table == 'platform':
-        result_set = StudySample.objects.filter(study__platform=where).values_list('sample_id')
-    
-    print result_set.count
+        result_set = Sample.objects.filter(studysample__study__platform=where).values_list('individual_id')
     
     if last_query is not None:
-        if result_set.count() > 0:
-            
+        if result_set.count() > 0:            
             if andor == "and":
                 intersection_set = set(list(last_query)).intersection(set(list(result_set)))
                 return list(intersection_set)
@@ -609,11 +633,11 @@ def perform_queries_with_ids(request, tables, wheres, where_iss, querystrs, quer
             querystr = ''
         
             if table == 'source':
-                query_summary = ["FROM source " + Source.objects.get(id=where).source_name]
+                query_string = "FROM source " + Source.objects.get(id=where).source_name
             elif table == 'study':
-                query_summary = ["FROM study " + Study.objects.get(id=where).study_name]
+                query_string = "FROM study " + Study.objects.get(id=where).study_name
             elif table == 'platform':
-                query_summary = ["FROM platform " + Platform.objects.get(id=where).platform_name]
+                query_string = "FROM platform " + Platform.objects.get(id=where).platform_name
         
         elif table == 'phenotype':
             where_is = where_iss.pop()                                
