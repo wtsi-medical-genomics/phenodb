@@ -64,15 +64,16 @@
 				}
 			});
 
+			// change the search options based on the type of filter
 			$("[id^=where]").change(function() {
 				// get the id number of the menu that changed so that we change the correct search filter
 				var idstr = $(this).attr("id")
 				var idarray = idstr.split("_")
 				var idnum = idarray[1]
-
+	
 				if ($(this).val() == 'message') {
 					$("#is_" + idnum).attr('disabled', true);
-				} else if ($("#from_" + idnum).val() == 'source' | $("#from_" + idnum).val() == 'sstudy' | $("#from_" + idnum).val() == 'platform') {
+				} else if ($("#from_" + idnum).val() == 'source' | $("#from_" + idnum).val() == 'study' | $("#from_" + idnum).val() == 'platform') {
 					$("#is_" + idnum).prop('value', '');
 					$("#is_" + idnum).attr('disabled', true);
 					$("#querystr_" + idnum).prop('value', '');
@@ -94,6 +95,21 @@
 							$("#querystr_" + idnum).prop('disabled', true);
 						}
 					});
+				}
+			});
+			
+			// turn the query string box off is a null query is selected
+			$("[id^=is]").change(function() {
+				// get the id number of the menu that changed so that we change the correct search filter
+				var idstr = $(this).attr("id")
+				var idarray = idstr.split("_")
+				var idnum = idarray[1]
+
+				if ($(this).val() == 'notnull' | $(this).val() == 'isnull') {
+					$("#querystr_" + idnum).prop('value', '');
+					$("#querystr_" + idnum).prop('disabled', true);
+				} else {
+					$("#querystr_" + idnum).prop('disabled', false);
 				}
 			});
 		});
@@ -175,6 +191,21 @@
 						$("#querystr_" + idnum).prop('disabled', true);
 					}
 				});
+			}
+		});
+		
+		// turn the query string box off is a null query is selected
+		$("[id^=is]").change(function() {
+			// get the id number of the menu that changed so that we change the correct search filter
+			var idstr = $(this).attr("id")
+			var idarray = idstr.split("_")
+			var idnum = idarray[1]
+
+			if ($(this).val() == 'notnull' | $(this).val() == 'isnull') {
+				$("#querystr_" + idnum).prop('value', '');
+				$("#querystr_" + idnum).prop('disabled', true);
+			} else {
+				$("#querystr_" + idnum).prop('disabled', false);
 			}
 		});
 
