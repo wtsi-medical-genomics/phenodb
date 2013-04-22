@@ -59,10 +59,8 @@ class AffectionStatusPhenotypeValue(models.Model):
     phenotype = models.ForeignKey(Phenotype)
     individual = models.ForeignKey(Individual)
     phenotype_value = models.SmallIntegerField()
-    flagged = models.BooleanField() 
     date_created = models.DateTimeField()
     last_updated = models.DateTimeField()
-    ## phenotype.db_index = True
     
     class Meta:
         unique_together = ('phenotype', 'individual',)
@@ -74,7 +72,6 @@ class QualitativePhenotypeValue(models.Model):
     phenotype = models.ForeignKey(Phenotype)
     individual = models.ForeignKey(Individual)
     phenotype_value = models.CharField(max_length=200)
-    flagged = models.BooleanField() 
     date_created = models.DateTimeField()
     last_updated = models.DateTimeField()
     
@@ -88,7 +85,6 @@ class QuantitiatvePhenotypeValue(models.Model):
     phenotype = models.ForeignKey(Phenotype)
     individual = models.ForeignKey(Individual)
     phenotype_value = models.DecimalField(max_digits=10, decimal_places=2)
-    flagged = models.BooleanField() 
     date_created = models.DateTimeField()
     last_updated = models.DateTimeField()
     
@@ -140,10 +136,8 @@ class AffectionStatusSampleFeatureValue(models.Model):
     sample_feature = models.ForeignKey(SampleFeature)
     sample = models.ForeignKey(Sample)
     sample_feature_value = models.SmallIntegerField()
-    flagged = models.BooleanField() 
     date_created = models.DateTimeField()
     last_updated = models.DateTimeField()
-    ## phenotype.db_index = True
     
     def __unicode__(self):
         return self.sample_feature_value
@@ -152,7 +146,6 @@ class QualitativeSampleFeatureValue(models.Model):
     sample_feature = models.ForeignKey(SampleFeature)
     sample = models.ForeignKey(Sample)
     sample_feature_value = models.CharField(max_length=200)
-    flagged = models.BooleanField() 
     date_created = models.DateTimeField()
     last_updated = models.DateTimeField()
     
@@ -163,7 +156,6 @@ class QuantitiatveSampleFeatureValue(models.Model):
     sample_feature = models.ForeignKey(SampleFeature)
     sample = models.ForeignKey(Sample)
     sample_feature_value = models.DecimalField(max_digits=10, decimal_places=2)
-    flagged = models.BooleanField() 
     date_created = models.DateTimeField()
     last_updated = models.DateTimeField()
     
