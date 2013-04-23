@@ -28,7 +28,7 @@ class AdminTest(TestCase):
         self.client.login(username='test', password='testy')
                 
         ## open a test input file
-        fh = open('/Users/jm20/work/workspace/phenodb/data/test_individual_input.csv', 'r')
+        fh = open('data/test_individual_input.csv', 'r')
         
         ## confirm that the test file contains the data we are expecting to make sure the file has not changed
         ## contains 3 lines
@@ -96,7 +96,7 @@ class AdminTest(TestCase):
         self.client.login(username='test', password='testy')
                 
         ## load a test input file
-        fh1 = open('/Users/jm20/work/workspace/phenodb/data/test_individual_input.csv', 'r')
+        fh1 = open('data/test_individual_input.csv', 'r')
         self.client.post('/admin/search/bulkupload/add/', {'import_data_type': 'Individuals', 'file_to_import':fh1})
 
         self.assertEqual(Individual.objects.all().count(), 12)
@@ -105,7 +105,7 @@ class AdminTest(TestCase):
         self.assertEqual(IndividualCollection.objects.all().count(), 11)
         
         ## load the same test input file again
-        fh2 = open('/Users/jm20/work/workspace/phenodb/data/test_individual_input.csv', 'r')
+        fh2 = open('data/test_individual_input.csv', 'r')
         self.client.post('/admin/search/bulkupload/add/', {'import_data_type': 'Individuals', 'file_to_import':fh2})
         
         self.assertEqual(Individual.objects.all().count(), 12)
@@ -178,8 +178,8 @@ class AdminTest(TestCase):
         self.client.login(username='test', password='testy')
                 
         ## open a test input files
-        indfh = open('/Users/jm20/work/workspace/phenodb/data/test_individual_input.csv', 'r')
-        samplefh = open('/Users/jm20/work/workspace/phenodb/data/test_individual_input.csv', 'r')
+        indfh = open('data/test_individual_input.csv', 'r')
+        samplefh = open('data/test_individual_input.csv', 'r')
         ## load individuals
         self.client.post('/admin/search/bulkupload/add/', {'import_data_type': 'Individuals', 'file_to_import':indfh})
         ## load samples
@@ -200,14 +200,14 @@ class AdminTest(TestCase):
         self.client.login(username='test', password='testy')
         
         ## open a test input files
-        indfh = open('/Users/jm20/work/workspace/phenodb/data/test_individual_input.csv', 'r')
-        samplefh = open('/Users/jm20/work/workspace/phenodb/data/test_individual_input.csv', 'r')
+        indfh = open('data/test_individual_input.csv', 'r')
+        samplefh = open('data/test_individual_input.csv', 'r')
         ## load individuals
         self.client.post('/admin/search/bulkupload/add/', {'import_data_type': 'Individuals', 'file_to_import':indfh})
         ## load samples
         self.client.post('/admin/search/bulkupload/add/', {'import_data_type': 'Samples', 'file_to_import':samplefh})
 
-        studyfh = open('/Users/jm20/work/workspace/phenodb/data/test_sample_study.csv', 'r')
+        studyfh = open('data/test_sample_study.csv', 'r')
         ## load samples
         self.client.post('/admin/search/bulkupload/add/', {'import_data_type': 'study_samples', 'file_to_import':studyfh})
         self.assertEqual(StudySample.objects.all().count(), 11)
@@ -217,14 +217,14 @@ class AdminTest(TestCase):
         self.client.login(username='test', password='testy')
         
         ## open a test input files
-        indfh = open('/Users/jm20/work/workspace/phenodb/data/test_individual_input.csv', 'r')
-        samplefh = open('/Users/jm20/work/workspace/phenodb/data/test_individual_input.csv', 'r')
+        indfh = open('data/test_individual_input.csv', 'r')
+        samplefh = open('data/test_individual_input.csv', 'r')
         ## load individuals
         self.client.post('/admin/search/bulkupload/add/', {'import_data_type': 'Individuals', 'file_to_import':indfh})
         ## load samples
         self.client.post('/admin/search/bulkupload/add/', {'import_data_type': 'Samples', 'file_to_import':samplefh})
 
-        indid2samplefh = open('/Users/jm20/work/workspace/phenodb/data/test_add_new_sampleID_on_sampleID.csv', 'r')
+        indid2samplefh = open('data/test_add_new_sampleID_on_sampleID.csv', 'r')
         ## load samples
         self.client.post('/admin/search/bulkupload/add/', {'import_data_type': 'add_sample_on_sample', 'file_to_import':indid2samplefh})
         self.assertEqual(Sample.objects.all().count(), 21)
@@ -243,11 +243,11 @@ class AdminTest(TestCase):
         
         self.client.login(username='test', password='testy')
 
-        fh = open('/Users/jm20/work/workspace/phenodb/data/test_individual_input.csv', 'r')
+        fh = open('data/test_individual_input.csv', 'r')
         self.client.post('/admin/search/bulkupload/add/', {'import_data_type': 'Individuals', 'file_to_import':fh})
         
         ## open test input file
-        fh = open('/Users/jm20/work/workspace/phenodb/data/test_add_phenotype.csv', 'r')
+        fh = open('data/test_add_phenotype.csv', 'r')
         self.client.post('/admin/search/bulkupload/add/', {'import_data_type': 'add_phenotype_values', 'file_to_import':fh})
         
         self.assertEqual(QuantitiatvePhenotypeValue.objects.filter(phenotype__phenotype_name="Test").count(), 5)
@@ -306,14 +306,14 @@ class QueryTest(TestCase):
         self.client.login(username='test', password='testy')
                 
         ## open test input files
-        indfh = open('/Users/jm20/work/workspace/phenodb/data/test_individual_input.csv', 'r')
-        samplefh = open('/Users/jm20/work/workspace/phenodb/data/test_individual_input.csv', 'r')
+        indfh = open('data/test_individual_input.csv', 'r')
+        samplefh = open('data/test_individual_input.csv', 'r')
         ## load individuals
         self.client.post('/admin/search/bulkupload/add/', {'import_data_type': 'Individuals', 'file_to_import':indfh})
         ## load samples
         self.client.post('/admin/search/bulkupload/add/', {'import_data_type': 'Samples', 'file_to_import':samplefh})
         ## load studies
-        studyfh = open('/Users/jm20/work/workspace/phenodb/data/test_sample_study.csv', 'r')
+        studyfh = open('data/test_sample_study.csv', 'r')
         self.client.post('/admin/search/bulkupload/add/', {'import_data_type': 'study_samples', 'file_to_import':studyfh})
         ## collections
         
@@ -340,19 +340,19 @@ class QueryTest(TestCase):
         self.assertEqual(response.context['count'], 12)
 
 #        user list, single phenotye, source_ids+source        
-        sourceIDsfh = open('/Users/jm20/work/workspace/phenodb/data/test_search_individual_source_ids.txt', 'r')
+        sourceIDsfh = open('data/test_search_individual_source_ids.txt', 'r')
         response = self.client.post('/search/querybuilder/', {'from': ['phenotype'], 'where': ['21'], 'is': ['true'], 'searchIn': 'userlist', 'individual_file': sourceIDsfh, 'output': ['PhenodbID'], 'andor': ['and']})
         self.assertEqual(response.context['count'], 3)
 #        user list, single phenotye, phenodb ids
-        phenoIDsfh = open('/Users/jm20/work/workspace/phenodb/data/test_search_individual_phenodb_ids.txt', 'r')
+        phenoIDsfh = open('data/test_search_individual_phenodb_ids.txt', 'r')
         response = self.client.post('/search/querybuilder/', {'from': ['phenotype'], 'where': ['21'], 'is': ['true'], 'searchIn': 'userlist', 'individual_file': phenoIDsfh, 'output': ['PhenodbID'], 'andor': ['and']})
         self.assertEqual(response.context['count'], 5)
 #        user list, multiple phenotyes, and
-        sourceIDsfh = open('/Users/jm20/work/workspace/phenodb/data/test_search_individual_source_ids.txt', 'r')
+        sourceIDsfh = open('data/test_search_individual_source_ids.txt', 'r')
         response = self.client.post('/search/querybuilder/', {'from': ['phenotype','phenotype'], 'where': ['21','3'], 'is': ['true','eq'], 'querystr': ['ulcerative colitis'], 'searchIn': 'userlist', 'individual_file': sourceIDsfh, 'output': ['PhenodbID'], 'andor': ['and','and']})
         self.assertEqual(response.context['count'], 2)
 #        user list, multiple phenotyes, or
-        sourceIDsfh = open('/Users/jm20/work/workspace/phenodb/data/test_search_individual_source_ids.txt', 'r')
+        sourceIDsfh = open('data/test_search_individual_source_ids.txt', 'r')
         response = self.client.post('/search/querybuilder/', {'from': ['phenotype','phenotype'], 'where': ['3','3'], 'is': ['eq','eq'], 'querystr': ['ulcerative colitis','crohn\'s disease'], 'searchIn': 'userlist', 'individual_file': sourceIDsfh, 'output': ['PhenodbID'], 'andor': ['or','and']})
         self.assertEqual(response.context['count'], 3)
 
