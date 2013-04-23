@@ -39,7 +39,7 @@ class BulkUploadAdmin(admin.ModelAdmin):
         warehouseCursor = connections['warehouse'].cursor()
         
         ## open file for recording messages
-        out_file = open('/Users/jm20/work/workspace/phenodb/data/bulk_upload_out', 'w')
+        out_file = open('data/bulk_upload_out', 'w')
         
         for line in records:
         
