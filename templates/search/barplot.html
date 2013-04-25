@@ -59,6 +59,7 @@ var svg = d3.select("#content").append("svg")
 d3.tsv("data", function(error, data) {
 
   data.forEach(function(d) {
+  	alert("here")
     d.count = +d.count;
   });
 
