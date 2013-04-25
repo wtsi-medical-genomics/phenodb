@@ -6,6 +6,12 @@ from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 import csv
 import json
 import StringIO
+
+## Fudge required for generating plots in production because writing to sys.stdout is by default restricted in versions of mod_wsgi
+## This restriction can be disabled by mapping sys.stdout to sys.stderr at global scope within in the WSGI application script file.
+import sys
+sys.stdout = sys.stderr
+
 # internal imports
 from search.models import IndividualIdentifier, AffectionStatusPhenotypeValue, QualitativePhenotypeValue, QuantitiatvePhenotypeValue, Phenotype, Platform, Individual, Study, Sample, Source, QC, Collection, StudySample, PhenodbIdentifier
 from search.tables import PhenotypeTable, PlatformTable, StudyTable, QCTable, SourceTable, CollectionTable
