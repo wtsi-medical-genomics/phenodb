@@ -39,7 +39,7 @@ class BulkUploadAdmin(admin.ModelAdmin):
         warehouseCursor = connections['warehouse'].cursor()
         
         ## open file for recording messages
-        out_file = open('data/bulk_upload_out', 'w')
+#        out_file = open('data/bulk_upload_out', 'w')
         
         for line in records:
         
@@ -493,10 +493,11 @@ class BulkUploadAdmin(admin.ModelAdmin):
                     warehouseCursor.execute("SELECT DISTINCT sanger_sample_id, supplier_name, cohort, country_of_origin, geographical_region  FROM samples WHERE name = %s ORDER BY checked_at desc", sample_id)
                     row = warehouseCursor.fetchone()
                     if row is None or row[0] is None:
-                        out_file.write(sample_id + " NOT in warehouse\n")
+#                        out_file.write(sample_id + " NOT in warehouse\n")
                         continue
                     else:
-                        out_file.write(str(row) + "\n")
+#                        out_file.write(str(row) + "\n")
+                        continue
                                                             
         return
 
