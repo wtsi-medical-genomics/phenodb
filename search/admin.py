@@ -235,10 +235,6 @@ class BulkUploadAdmin(admin.ModelAdmin):
                     messages.error(request, u"Can't find source in database '" + centre + u"'")
                     continue                
                 
-                ## get the individual id
-                
-                ## check that a sample has not already been entered for the ind with the same name
-                
                 ## check if the id has already been entered for the given source
                 try:
                     sampleIndId = IndividualIdentifier.objects.get(individual_string=centre_id,source_id=source.id)
@@ -246,6 +242,7 @@ class BulkUploadAdmin(admin.ModelAdmin):
                     messages.error(request, u"Individual " + centre_id + u" NOT found in phenodb")
                     continue
                 
+                ## check that a sample has not already been entered for the ind with the same name
                 if Sample.objects.filter(individual=sampleIndId.individual,sample_id=sample_id).count() > 0:
                     messages.error(request, u"Sample ID '" + sample_id + u"' already added for this individual")
                     continue
@@ -255,7 +252,6 @@ class BulkUploadAdmin(admin.ModelAdmin):
                 sample.sample_id = sample_id
                 sample.date_created = datetime.datetime.now()
                 sample.last_updated = datetime.datetime.now()
-                
                 
                 ## if the sanger warehouse is not available then skip this step and warn the user
                 try: 
