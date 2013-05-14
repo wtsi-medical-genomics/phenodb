@@ -385,7 +385,13 @@ class QueryTest(TestCase):
 #        multiple studies or 
         response = self.client.post('/search/querybuilder/', {'from': ['platform','platform'], 'where': ['1','2'], 'searchIn': 'all', 'output': ['PhenodbID'], 'andor': ['or','or']})
         self.assertEqual(response.context['count'], 11)
-        
+
+#        search using sample ids only
+        sampleIDsfh = open('data/test_search_sample_ids.txt', 'r')
+        response = self.client.post('/search/querybuilder/', {'from': ['message'], 'where': [''], 'is': [''], 'searchIn': 'userlist', 'individual_file': sampleIDsfh, 'output': ['PhenodbID'], 'andor': ['and']})
+        self.assertEqual(response.context['count'], 12)
+#        test ignoring case on ind/sample id searches
+
 #        output file
     
     def parse_html_table(self, html_table):
