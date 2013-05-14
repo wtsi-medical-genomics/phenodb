@@ -279,11 +279,17 @@ def querybuilder(request):
                     # array of tuples
                     db_ids = []                
                     for user_id in user_ids:
+                        
                         if len(user_id) == 1:
                             try:
                                 query_result = PhenodbIdentifier.objects.get(phenodb_id=user_id[0])
                             except PhenodbIdentifier.DoesNotExist:
-                                continue
+                                # see if the id is a sample id
+                                try:
+                                    query_result = Sample.objects.get(sample_id=user_id[0])
+                                except Sample.DoesNotExist:
+                                    continue
+                                                            
                         elif len(user_id) == 2:
                             try:
                                 query_result = IndividualIdentifier.objects.get(individual_string__iexact=user_id[0], source__source_name__iexact=user_id[1])
@@ -624,13 +630,16 @@ def perform_queries(request, tables, wheres, where_iss, querystrs, andors):
 
 def perform_queries_with_ids(request, tables, wheres, where_iss, querystrs, user_ids, andors):
     
-    ## perform all the filtering and then filter out only those in the user id list        
-    query_results = perform_queries(request, tables, wheres, where_iss, querystrs, andors)  
-    result_ids = query_results[0]
-    query_summary = query_results[1]
-    query_results = set(list(result_ids)).intersection(set(list(user_ids)))
+    if tables[-1] == 'message':
+        return user_ids, ""
+    else:
+        ## perform all the filtering and then filter out only those in the user id list
+        query_results = perform_queries(request, tables, wheres, where_iss, querystrs, andors)  
+        result_ids = query_results[0]
+        query_summary = query_results[1]
+        query_results = set(list(result_ids)).intersection(set(list(user_ids)))
     
-    return query_results, query_summary
+        return query_results, query_summary
 
 def get_page_results(paginator, page):
     
