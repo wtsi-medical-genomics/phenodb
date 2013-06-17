@@ -3,3 +3,5 @@ phenodb/settings_prod.py
 phenodb/settings_home.py
 phenodb/settings_test.py
 phenodb/settings_dev.py
+.project
+.pydevproject
