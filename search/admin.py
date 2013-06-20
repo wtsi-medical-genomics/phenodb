@@ -2,6 +2,7 @@ from django import forms
 from search.models import *
 from django.contrib import admin
 import datetime
+from django.utils.timezone import utc
 import csv
 from django.db import connections
 from decimal import *
@@ -9,19 +10,63 @@ from django.db import IntegrityError, DatabaseError
 from django.contrib import messages
 from django.db import transaction
 
+
 class BulkUploadForm(forms.ModelForm):
-    file_to_import = forms.FileField()
+    
     import_options = (
-        ('Individuals','Individuals'),
-        ('Phenotypes','Phenotypes'),
-        ('Samples','Samples'),
-        ('Sources','Sources'),
+        ('phenotypes','Phenotypes'),
+        ('sources','Sources'),
+        ('individuals','Individuals'),        
+        ('samples','Samples'),                
         ('study_samples', 'Study Samples'),
-        ('add_sample_on_sample', 'Add New SampleID on SampleID'),
-        ('add_phenotype_values', 'Add phenotype values to individuals'),
-        ('check_samples_in_warehouse', 'Check Samples in Sanger Warehouse'),
+        ('sample_qc', 'Sample QC'),
+        ('add_sample_on_sample', 'Add New SampleID to existing Sample on SampleID'),
+        ('add_phenotype_values', 'Add phenotype values to existing individuals')
+        #('check_samples_in_warehouse', 'Check Samples in Sanger Warehouse'),
     )
-    import_data_type = forms.ChoiceField(import_options)
+    import_data_type = forms.ChoiceField(import_options, help_text = "Select the type of data you wish to import")
+    
+    file_format_description = """
+    <b>File Formats:</b><br>
+    Column Headings:&ltrequired_column&gt [optional_column] - The columns may be in any order however the column headings must match the required values <br>
+
+    <b>Phenotypes</b><br>
+    &nbsp&nbsp&ltname&gt &lttype&gt &ltdescription&gt <br>
+    
+    <b>Sources</b><br>
+    &nbsp&nbsp&ltcentre&gt &ltcontact&gt &ltdescription&gt <br>
+    
+    <b>Individuals</b><br>
+    &nbsp&nbsp&ltcentre&gt &ltcentre_id&gt [collection] [any Phenotype name already entered in the Phenotype table]...<br>
+    
+    <b>Samples</b><br>
+    &nbsp&nbsp&ltsample_id&gt &ltcentre&gt &ltcentre_id&gt <br>
+    
+    <b>Study Samples</b><br>    
+    &nbsp&nbspOne sample_id per line, select the study from the dropdown menu <br>
+    
+    <b>Sample QC</b><br>
+    &nbsp&nbsp&ltsample_id&gt &ltqc_value&gt<br>
+    &nbsp&nbspQC_values should be 0 (Fail) or 1 (Pass), select the QC and Study from the dropdown menus <br>
+    
+    <b>New Sample ID on existing Sample</b><br>
+    &nbsp&nbsp&ltsample_id&gt &ltnew_sample_id&gt <br>
+    
+    <b>Add Phenotype to existing Individual</b><br>
+    &nbsp&nbsp&ltcentre&gt &ltcentre_id&gt [any Phenotype name already entered in the Phenotype table]... <br>
+    
+    """
+    file_to_import = forms.FileField(help_text = file_format_description)
+    
+    delimiter_options = (
+        ('\t','Tab'),
+        (',', 'Comma'),
+        (' ', 'Spaces')
+    )    
+    file_delimiter = forms.ChoiceField(delimiter_options, help_text = "Select the delimeter used in the file")
+    
+    study_id = forms.ModelChoiceField(Study.objects.all(), required=False, help_text = "Only required when adding Study Samples")
+    qc_id = forms.ModelChoiceField(QC.objects.all(), required=False, help_text = "Only required when adding Samples QC values")
 
     class Meta:
         model = BulkUpload
@@ -34,8 +79,89 @@ class BulkUploadAdmin(admin.ModelAdmin):
     
     #Overrides model object saving.
     def save_model(self, request, obj, form, change):
-        records = csv.DictReader(request.FILES["file_to_import"])
+        
         import_data_type = request.POST["import_data_type"]
+        file_delimiter = request.POST["file_delimiter"]
+        
+        if import_data_type == "study_samples":                
+            
+            study_id = request.POST["study_id"]
+            study = Study.objects.get(id=study_id)
+            
+            for line in request.FILES["file_to_import"]:
+                sample_id = line.strip()
+                
+                try:
+                    sample = Sample.objects.get(sample_id=sample_id)
+                except Sample.DoesNotExist:
+                    messages.error(request, u"Can't find sample in database '" + sample_id + u"'")
+                    continue                                
+                
+                studySample = StudySample()
+                studySample.sample = sample
+                studySample.study = study
+                studySample.date_created = datetime.datetime.utcnow().replace(tzinfo=utc)
+                studySample.last_updated = datetime.datetime.utcnow().replace(tzinfo=utc)     
+                
+                try:
+                    studySample.save()
+                except IntegrityError:
+                    messages.error(request, u"Sample " + sample_id + " and study " + study_id + " is already in the database")
+                    continue        
+            return
+        
+        elif import_data_type == "sample_qc":
+            
+            study_id = request.POST["study_id"]
+            qc_id    = request.POST["qc_id"]
+            
+            study = Study.objects.get(id=study_id)
+            qc    = QC.objects.get(id=qc_id)
+            
+            records = csv.DictReader(request.FILES["file_to_import"], delimiter='\t')
+            
+            for line in records:
+                
+                ## required columns: Centre,Centre ID                
+                try:
+                    sample_id = line['sample_id']
+                    qc_value = line['qc_value']                    
+                except KeyError:
+                    messages.error(request, u"Input file is missing required column(s) 'sample_id qc_value'")
+                    return     
+                
+                try:
+                    sample = Sample.objects.get(sample_id=sample_id)
+                except Sample.DoesNotExist:
+                    messages.error(request, u"Can't find sample in database '" + sample_id + u"'")
+                    continue                                
+                
+                try:
+                    study_sample = StudySample.objects.get(sample=sample,study=study)
+                except Sample.DoesNotExist:
+                    messages.error(request, u"Can't find study sample in database '" + sample_id + u"' '" + study.study_name + u"'")
+                    continue
+                
+                
+                sampleQC = SampleQC()
+                sampleQC.qc = qc
+                sampleQC.study_sample = study_sample
+                if qc_value == '1':
+                    sampleQC.qc_pass = True
+                else:
+                    sampleQC.qc_pass = False                    
+                sampleQC.date_created = datetime.datetime.utcnow().replace(tzinfo=utc)
+                sampleQC.last_updated = datetime.datetime.utcnow().replace(tzinfo=utc)                
+                
+                try:
+                    sampleQC.save()
+                except IntegrityError, err:
+                    messages.error(request, u"Sample " + sample_id + " and study " + study_id + " is already in the database " + str(err))
+                    continue        
+            return
+            
+        
+        records = csv.DictReader(request.FILES["file_to_import"])
         warehouseCursor = connections['warehouse'].cursor()
         
         ## open file for recording messages
@@ -43,13 +169,13 @@ class BulkUploadAdmin(admin.ModelAdmin):
         
         for line in records:
         
-            if import_data_type == "Individuals":
-                ## required columns: Centre,Centre ID                
+            if import_data_type == "individuals":
+                
                 try:
-                    centre = line['Centre']
-                    centre_id = line['Centre ID']                    
+                    centre = line['centre']
+                    centre_id = line['centre_id']                    
                 except KeyError:
-                    messages.error(request, u"Input file is missing required column(s) 'Centre,Centre ID'")
+                    messages.error(request, u"Input file is missing required column(s) 'centre centre_id'")
                     return     
                 
                 try:
@@ -66,20 +192,20 @@ class BulkUploadAdmin(admin.ModelAdmin):
                 ## an empty active_id field means that the object refers to itself!
                 ## if the active_id field is not empty, that means it refers to another individual object
                 ind = Individual()                
-                ind.date_created = datetime.datetime.now()
-                ind.last_updated = datetime.datetime.now()
+                ind.date_created = datetime.datetime.utcnow().replace(tzinfo=utc)
+                ind.last_updated = datetime.datetime.utcnow().replace(tzinfo=utc)
                 ind.save()                    
                 
                 ## create the phenodb_id
                 pdbId = PhenodbIdentifier()
                 pdbId.individual = ind
                 pdbId.phenodb_id = u"pdb" + str(ind.pk)
-                pdbId.date_created = datetime.datetime.now()
-                pdbId.last_updated = datetime.datetime.now()
+                pdbId.date_created = datetime.datetime.utcnow().replace(tzinfo=utc)
+                pdbId.last_updated = datetime.datetime.utcnow().replace(tzinfo=utc)
                 pdbId.save()
                 
                 try:
-                    collection = line['Collection']
+                    collection = line['collection']
                     coll = Collection.objects.get(collection_name=collection)
                 except Collection.DoesNotExist:
                     messages.error(request, u"Can't find collection in database '" + collection + u"'")
@@ -91,8 +217,8 @@ class BulkUploadAdmin(admin.ModelAdmin):
                     indColl = IndividualCollection()
                     indColl.individual = ind
                     indColl.collection = coll
-                    indColl.date_created = datetime.datetime.now()
-                    indColl.last_updated = datetime.datetime.now()
+                    indColl.date_created = datetime.datetime.utcnow().replace(tzinfo=utc)
+                    indColl.last_updated = datetime.datetime.utcnow().replace(tzinfo=utc)
                     indColl.save()
                       
                 ## insert the individual identifier
@@ -100,12 +226,12 @@ class BulkUploadAdmin(admin.ModelAdmin):
                 indId.individual = ind
                 indId.individual_string = centre_id                
                 indId.source = source
-                indId.date_created = datetime.datetime.now()
-                indId.last_updated = datetime.datetime.now()                
+                indId.date_created = datetime.datetime.utcnow().replace(tzinfo=utc)
+                indId.last_updated = datetime.datetime.utcnow().replace(tzinfo=utc)                
                 try:
                     indId.save()
                 except IntegrityError:
-                    messages.error(request, u"Individual ID " + centre_id + " is already in the database")
+                    messages.error(request, u"centre_id " + centre_id + " is already in the database")
                     continue
                                         
                 ## insert phenotype values
@@ -135,8 +261,8 @@ class BulkUploadAdmin(admin.ModelAdmin):
                         else:
                             continue
                         affectVal.flagged = False
-                        affectVal.date_created = datetime.datetime.now()
-                        affectVal.last_updated = datetime.datetime.now()
+                        affectVal.date_created = datetime.datetime.utcnow().replace(tzinfo=utc)
+                        affectVal.last_updated = datetime.datetime.utcnow().replace(tzinfo=utc)
                         try:
                             affectVal.save()
                         except:
@@ -147,8 +273,8 @@ class BulkUploadAdmin(admin.ModelAdmin):
                         qualVal.individual = ind
                         qualVal.phenotype_value = line[col].strip()
                         qualVal.flagged = False
-                        qualVal.date_created = datetime.datetime.now()
-                        qualVal.last_updated = datetime.datetime.now()
+                        qualVal.date_created = datetime.datetime.utcnow().replace(tzinfo=utc)
+                        qualVal.last_updated = datetime.datetime.utcnow().replace(tzinfo=utc)
                         try:
                             qualVal.save()
                         except:
@@ -174,8 +300,8 @@ class BulkUploadAdmin(admin.ModelAdmin):
                                 continue
                             quantVal.phenotype_value = Decimal(line[col])                            
                         quantVal.flagged = False
-                        quantVal.date_created = datetime.datetime.now()
-                        quantVal.last_updated = datetime.datetime.now()
+                        quantVal.date_created = datetime.datetime.utcnow().replace(tzinfo=utc)
+                        quantVal.last_updated = datetime.datetime.utcnow().replace(tzinfo=utc)
                         try:
                             quantVal.save()
                         except:
@@ -185,48 +311,63 @@ class BulkUploadAdmin(admin.ModelAdmin):
                         
                     transaction.commit()
             
-            elif import_data_type == "Phenotypes":
-                ## required columns: Name,Type,Description
-                ## check if the required columns are in the file otherwise die explaining required format
+            elif import_data_type == "phenotypes":
+                
                 try:
-                    phenoType = PhenotypeType.objects.get(phenotype_type=line['Type'])
+                    name = line['name']
+                    type = line['type']
+                    description = line['description']                    
+                except KeyError:
+                    messages.error(request, u"Input file is missing required column(s) 'name type description'")
+                    return    
+                
+                try:
+                    phenoType = PhenotypeType.objects.get(phenotype_type=type)
                 except PhenotypeType.DoesNotExist:
-                    messages.error(request, u"Phenotype Type " + line['Type'] + u" was NOT found in phenodb for " + line['Name'])
+                    messages.error(request, u"Phenotype Type " + type + u" was NOT found in phenodb for " + name)
                     continue
                          
                 pheno = Phenotype()
-                pheno.phenotype_name = line['Name']
+                pheno.phenotype_name = name
                 pheno.phenotype_type = phenoType
-                pheno.phenotype_description = line['Description']
+                pheno.phenotype_description = description
+                
                 try:
                     pheno.save()
                 except IntegrityError:
-                    messages.error(request, u"Phenotype " + line['Name'] + " is already in the database")
+                    messages.error(request, u"Phenotype " + line['name'] + " is already in the database")
                     continue
-                messages.success(request, u"Phenotype " + line['Name'] + u" was added to PhenoDB")
+                messages.success(request, u"Phenotype " + line['name'] + u" was added to PhenoDB")
                 
-            elif import_data_type == "Sources":
-                ## required columns: Name,Contact,Description
-                ## check if the required columns are in the file otherwise die explaining required format
+            elif import_data_type == "sources":
+                
+                try:
+                    name = line['centre']
+                    contact = line['contact']
+                    description = line['description']                    
+                except KeyError:
+                    messages.error(request, u"Input file is missing required column(s) 'centre contact description'")
+                    return 
+                
                 source = Source()
-                source.source_name = line['Centre']
-                source.contact_name = line['Contact']
-                source.source_description = line['Description']
+                source.source_name = name
+                source.contact_name = contact
+                source.source_description = description
                 try:
                     source.save()
                 except IntegrityError:
-                    messages.error(request, u"Source " + line['Centre'] + " is already in the database")
+                    messages.error(request, u"Source " + line['centre'] + " is already in the database")
                     continue
-                messages.success(request, u"Source " + line['Centre'] + u" was added to PhenoDB")
+                messages.success(request, u"Source " + line['centre'] + u" was added to PhenoDB")
                     
-            elif import_data_type == "Samples":
+            elif import_data_type == "samples":
                 ## required columns: Centre,Centre ID,Sample ID                
                 try:
-                    centre = line['Centre']
-                    centre_id = line['Centre ID']
-                    sample_id = line['Sample ID']                    
+                    centre = line['centre']
+                    centre_id = line['centre_id']
+                    sample_id = line['sample_id']                    
                 except KeyError:
-                    messages.error(request, u"Input file is missing required column(s) 'Centre,Centre ID,Sample ID'")
+                    messages.error(request, u"Input file is missing required column(s) 'centre centre_id sample_id'")
                     return     
                 
                 try:
@@ -250,8 +391,8 @@ class BulkUploadAdmin(admin.ModelAdmin):
                 sample = Sample()
                 sample.individual = sampleIndId.individual
                 sample.sample_id = sample_id
-                sample.date_created = datetime.datetime.now()
-                sample.last_updated = datetime.datetime.now()
+                sample.date_created = datetime.datetime.utcnow().replace(tzinfo=utc)
+                sample.last_updated = datetime.datetime.utcnow().replace(tzinfo=utc)
                 
                 ## if the sanger warehouse is not available then skip this step and warn the user
                 try: 
@@ -274,8 +415,8 @@ class BulkUploadAdmin(admin.ModelAdmin):
                         indId.individual = sampleIndId.individual
                         indId.individual_string = row[1]
                         indId.source = source
-                        indId.date_created = datetime.datetime.now()
-                        indId.last_updated = datetime.datetime.now()
+                        indId.date_created = datetime.datetime.utcnow().replace(tzinfo=utc)
+                        indId.last_updated = datetime.datetime.utcnow().replace(tzinfo=utc)
                         try:
                             indId.save()
                         except IntegrityError:
@@ -291,46 +432,13 @@ class BulkUploadAdmin(admin.ModelAdmin):
                     continue
                 transaction.commit()
                 
-            elif import_data_type == "study_samples":                
-                ## required columns: Sample ID,Study Name                
-                try:
-                    sample_id = line['Sample ID']     
-                    study_name = line['Study Name']                                   
-                except KeyError:
-                    messages.error(request, u"Input file is missing required column(s) 'Sample ID','Study Name'")
-                    return     
-                
-                try:
-                    sample = Sample.objects.get(sample_id=sample_id)
-                except Sample.DoesNotExist:
-                    messages.error(request, u"Can't find sample in database '" + sample_id + u"'")
-                    continue                
-                
-                try:
-                    study = Study.objects.get(study_name=study_name)
-                except Study.DoesNotExist:
-                    messages.error(request, u"Can't find study in database '" + study_name + u"'")
-                    continue
-                
-                studySample = StudySample()
-                studySample.sample = sample
-                studySample.study = study
-                studySample.date_created = datetime.datetime.now()
-                studySample.last_updated = datetime.datetime.now()                
-                try:
-                    studySample.save()
-                except IntegrityError:
-                    messages.error(request, u"Source " + line['Centre'] + " is already in the database")
-                    continue
-                ##messages.success(request, u"Study sample " + sample_id + u":" + study_name+ u" was added to PhenoDB")
-            
             elif import_data_type == "add_sample_on_sample":
                 ## required columns: Sample ID, New Sample ID
                 try:
-                    sample_id = line['Sample ID']     
-                    new_sample_id = line['New Sample ID']                                                       
+                    sample_id = line['sample_id']     
+                    new_sample_id = line['new_sample_id']                                                       
                 except KeyError:
-                    messages.error(request, u"Input file is missing required column(s) 'Sample ID','New Sample ID'")
+                    messages.error(request, u"Input file is missing required column(s) 'sample_id','new_sample_id'")
                     return
                 
                 try:
@@ -347,23 +455,23 @@ class BulkUploadAdmin(admin.ModelAdmin):
                 
                 ## check if this sample has already been added for this individual
                 if Sample.objects.filter(sample_id=new_sample_id, individual=individual.id).count() > 0:
-                    messages.error(request, u"Sample ID '" + new_sample_id + u"' already added for this individual")
+                    messages.error(request, u"sample_id '" + new_sample_id + u"' already added for this individual")
                     continue
                 
                 sample = Sample()
                 sample.individual = individual
                 sample.sample_id = new_sample_id
-                sample.date_created = datetime.datetime.now()
-                sample.last_updated = datetime.datetime.now()
+                sample.date_created = datetime.datetime.utcnow().replace(tzinfo=utc)
+                sample.last_updated = datetime.datetime.utcnow().replace(tzinfo=utc)
                 sample.save()
             
             elif import_data_type == "add_phenotype_values":
-                ## required columns: Center, Centre ID, phenotype
+                
                 try:
-                    centre = line['Centre']
-                    centre_id = line['Centre ID']                    
+                    centre = line['centre']
+                    centre_id = line['centre_id']                    
                 except KeyError:
-                    messages.error(request, u"Input file is missing required column(s) 'Centre,Centre ID'")
+                    messages.error(request, u"Input file is missing required column(s) 'centre centre_id'")
                     return
                 try:
                     source = Source.objects.get(source_name=centre)
@@ -413,8 +521,8 @@ class BulkUploadAdmin(admin.ModelAdmin):
                             affectVal.individual = ind
                             affectVal.phenotype_value = phenotype_value
                             affectVal.flagged = False
-                            affectVal.date_created = datetime.datetime.now()
-                            affectVal.last_updated = datetime.datetime.now()
+                            affectVal.date_created = datetime.datetime.utcnow().replace(tzinfo=utc)
+                            affectVal.last_updated = datetime.datetime.utcnow().replace(tzinfo=utc)
                         try:
                             affectVal.save()
                         except:
@@ -433,8 +541,8 @@ class BulkUploadAdmin(admin.ModelAdmin):
                             qualVal.individual = ind
                             qualVal.phenotype_value = phenotype_value
                             qualVal.flagged = False
-                            qualVal.date_created = datetime.datetime.now()
-                            qualVal.last_updated = datetime.datetime.now()                        
+                            qualVal.date_created = datetime.datetime.utcnow().replace(tzinfo=utc)
+                            qualVal.last_updated = datetime.datetime.utcnow().replace(tzinfo=utc)                        
                         try:
                             qualVal.save()
                         except:
@@ -467,8 +575,8 @@ class BulkUploadAdmin(admin.ModelAdmin):
                             quantVal.individual = ind
                             quantVal.phenotype_value = phenotype_value
                             quantVal.flagged = False
-                            quantVal.date_created = datetime.datetime.now()
-                            quantVal.last_updated = datetime.datetime.now()
+                            quantVal.date_created = datetime.datetime.utcnow().replace(tzinfo=utc)
+                            quantVal.last_updated = datetime.datetime.utcnow().replace(tzinfo=utc)
                         try:
                             quantVal.save()
                         except:
@@ -478,9 +586,9 @@ class BulkUploadAdmin(admin.ModelAdmin):
             
             elif import_data_type == "check_samples_in_warehouse":                
                 try:
-                    sample_id = line['Sample ID']                    
+                    sample_id = line['sample_id']                    
                 except KeyError:
-                    messages.error(request, u"Input file is missing required column(s) 'Sample ID'")
+                    messages.error(request, u"Input file is missing required column(s) 'sample_id'")
                     return     
     
                 if Sample.objects.filter(sample_id=sample_id).exists(): 
