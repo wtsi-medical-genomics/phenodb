@@ -54,6 +54,9 @@ class IndividualCollection(models.Model):
     collection = models.ForeignKey(Collection)
     date_created = models.DateTimeField()
     last_updated = models.DateTimeField()
+    
+    class Meta:
+        unique_together = ('individual', 'collection',)
 
 class AffectionStatusPhenotypeValue(models.Model):
     phenotype = models.ForeignKey(Phenotype)
@@ -116,6 +119,9 @@ class StudySample(models.Model):
     sample = models.ForeignKey(Sample)
     date_created = models.DateTimeField()
     last_updated = models.DateTimeField()
+    
+    class Meta:
+        unique_together = ('study', 'sample',)
     
     
 class SampleFeatureType(models.Model):
@@ -186,8 +192,6 @@ class IndividualIdentifier(models.Model):
 class QC(models.Model):
     qc_name = models.CharField(max_length=100, unique=True)
     qc_description = models.TextField()
-    date_created = models.DateTimeField()
-    last_updated = models.DateTimeField()
     
     def __unicode__(self):
         return self.qc_name
@@ -198,6 +202,9 @@ class SampleQC(models.Model):
     qc_pass = models.BooleanField()
     date_created = models.DateTimeField()
     last_updated = models.DateTimeField()
+    
+    class Meta:
+        unique_together = ('study_sample', 'qc',)
     
 class BulkUpload(models.Model):
     pass    
