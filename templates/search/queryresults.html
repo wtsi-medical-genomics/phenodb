@@ -44,21 +44,21 @@
   {{tablehtml|safe}}
 
 <div>
-  <a href={% url search-exportcsv %}><i class="icon-file"></i><em>export to .tsv</em></a>
+  <a href={% url 'search.views.query_export' %}><i class="icon-file"></i><em>export to .tsv</em></a>
 </div>
 
 <div class="pagination pagination-centered">
   <ul>
     {% if page_results.has_previous %}
-      <li><a href={% url search-querypage page_results.previous_page_number results_per_page %}>previous</a></li>
+      <li><a href={% url 'search.views.querypage' page_results.previous_page_number results_per_page %}>previous</a></li>
     {% else %}
-      <li class="active"><a href="?page={{ page_results.previous_page_number }}">previous</a></li>
+      <li class="active"><a href="">previous</a></li>
     {% endif %}
     <li class="active"><a href="#">{{ page_results.number }}</a></li>
     {% if page_results.has_next %}
-      <li><a href={% url search-querypage page_results.next_page_number results_per_page %}>next</a></li>
+      <li><a href={% url 'search.views.querypage' page_results.next_page_number results_per_page %}>next</a></li>
     {% else %}
-      <li class="active"><a href="/search/querybuilder/?page={{ page_results.next_page_number }}">next</a></li>
+      <li class="active"><a href="">next</a></li>
     {% endif %}
   </ul>  
 </div>
