@@ -286,7 +286,7 @@ def querybuilder(request):
                             except PhenodbIdentifier.DoesNotExist:
                                 # see if the id is a sample id
                                 try:
-                                    query_result = Sample.objects.get(sample_id=user_id[0])
+                                    query_result = Sample.objects.get(sample_id__iexact=user_id[0])
                                 except Sample.DoesNotExist:
                                     continue
                                                             
