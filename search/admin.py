@@ -59,9 +59,8 @@ class BulkUploadForm(forms.ModelForm):
     file_to_import = forms.FileField(help_text = file_format_description)
     
     delimiter_options = (
-        ('\t','Tab'),
-        (',', 'Comma'),
-        (' ', 'Spaces')
+        ('tab','Tab'),
+        ('comma', 'Comma')
     )    
     file_delimiter = forms.ChoiceField(delimiter_options, help_text = "Select the delimeter used in the file")
     
@@ -118,7 +117,10 @@ class BulkUploadAdmin(admin.ModelAdmin):
             study = Study.objects.get(id=study_id)
             qc    = QC.objects.get(id=qc_id)
             
-            records = csv.DictReader(request.FILES["file_to_import"], delimiter='\t')
+            if file_delimiter == "tab":
+                records = csv.DictReader(request.FILES["file_to_import"], delimiter='\t')
+            else:
+                records = csv.DictReader(request.FILES["file_to_import"])
             
             for line in records:
                 
@@ -160,17 +162,14 @@ class BulkUploadAdmin(admin.ModelAdmin):
                     continue        
             return
             
-        
-        records = csv.DictReader(request.FILES["file_to_import"])
-        warehouseCursor = connections['warehouse'].cursor()
-        
-        ## open file for recording messages
-#        out_file = open('data/bulk_upload_out', 'w')
-        
-        for line in records:
-        
-            if import_data_type == "individuals":
-                
+        elif import_data_type == "individuals":
+            
+            if file_delimiter == "tab":
+                records = csv.DictReader(request.FILES["file_to_import"], delimiter='\t')
+            else:
+                records = csv.DictReader(request.FILES["file_to_import"])
+            
+            for line in records:
                 try:
                     centre = line['centre']
                     centre_id = line['centre_id']                    
@@ -260,7 +259,6 @@ class BulkUploadAdmin(admin.ModelAdmin):
                             affectVal.phenotype_value = True
                         else:
                             continue
-                        affectVal.flagged = False
                         affectVal.date_created = datetime.datetime.utcnow().replace(tzinfo=utc)
                         affectVal.last_updated = datetime.datetime.utcnow().replace(tzinfo=utc)
                         try:
@@ -272,7 +270,6 @@ class BulkUploadAdmin(admin.ModelAdmin):
                         qualVal.phenotype = pheno
                         qualVal.individual = ind
                         qualVal.phenotype_value = line[col].strip()
-                        qualVal.flagged = False
                         qualVal.date_created = datetime.datetime.utcnow().replace(tzinfo=utc)
                         qualVal.last_updated = datetime.datetime.utcnow().replace(tzinfo=utc)
                         try:
@@ -299,7 +296,6 @@ class BulkUploadAdmin(admin.ModelAdmin):
                             if str.isdigit(line[col]) == False:
                                 continue
                             quantVal.phenotype_value = Decimal(line[col])                            
-                        quantVal.flagged = False
                         quantVal.date_created = datetime.datetime.utcnow().replace(tzinfo=utc)
                         quantVal.last_updated = datetime.datetime.utcnow().replace(tzinfo=utc)
                         try:
@@ -310,9 +306,16 @@ class BulkUploadAdmin(admin.ModelAdmin):
                         messages.error(request, u"unrecognised phenotype type " + pheno.phenotype_type.phenotype_type)
                         
                     transaction.commit()
+            return
             
-            elif import_data_type == "phenotypes":
-                
+        elif import_data_type == "phenotypes":
+            
+            if file_delimiter == "tab":
+                records = csv.DictReader(request.FILES["file_to_import"], delimiter='\t')
+            else:
+                records = csv.DictReader(request.FILES["file_to_import"])
+            
+            for line in records:
                 try:
                     name = line['name']
                     type = line['type']
@@ -338,9 +341,16 @@ class BulkUploadAdmin(admin.ModelAdmin):
                     messages.error(request, u"Phenotype " + line['name'] + " is already in the database")
                     continue
                 messages.success(request, u"Phenotype " + line['name'] + u" was added to PhenoDB")
-                
-            elif import_data_type == "sources":
-                
+            return
+        
+        elif import_data_type == "sources":
+            
+            if file_delimiter == "tab":
+                records = csv.DictReader(request.FILES["file_to_import"], delimiter='\t')
+            else:
+                records = csv.DictReader(request.FILES["file_to_import"])
+            
+            for line in records:
                 try:
                     name = line['centre']
                     contact = line['contact']
@@ -358,10 +368,18 @@ class BulkUploadAdmin(admin.ModelAdmin):
                 except IntegrityError:
                     messages.error(request, u"Source " + line['centre'] + " is already in the database")
                     continue
-                messages.success(request, u"Source " + line['centre'] + u" was added to PhenoDB")
-                    
-            elif import_data_type == "samples":
-                ## required columns: Centre,Centre ID,Sample ID                
+                messages.success(request, u"Source " + line['centre'] + u" was added to PhenoDB")                
+            return
+        
+        elif import_data_type == "samples":
+            
+            warehouseCursor = connections['warehouse'].cursor()
+            if file_delimiter == "tab":
+                records = csv.DictReader(request.FILES["file_to_import"], delimiter='\t')
+            else:
+                records = csv.DictReader(request.FILES["file_to_import"])
+            
+            for line in records:
                 try:
                     centre = line['centre']
                     centre_id = line['centre_id']
@@ -431,9 +449,16 @@ class BulkUploadAdmin(admin.ModelAdmin):
 #                   messages.error(request, u"Sample " + sample_id + " is already in the database")
                     continue
                 transaction.commit()
+            return
+        
+        elif import_data_type == "add_sample_on_sample":
+            
+            if file_delimiter == "tab":
+                records = csv.DictReader(request.FILES["file_to_import"], delimiter='\t')
+            else:
+                records = csv.DictReader(request.FILES["file_to_import"])
                 
-            elif import_data_type == "add_sample_on_sample":
-                ## required columns: Sample ID, New Sample ID
+            for line in records:    
                 try:
                     sample_id = line['sample_id']     
                     new_sample_id = line['new_sample_id']                                                       
@@ -444,16 +469,16 @@ class BulkUploadAdmin(admin.ModelAdmin):
                 try:
                     sample = Sample.objects.get(sample_id=sample_id)
                 except Sample.DoesNotExist:
-#                    messages.error(request, u"Can't find sample in database '" + sample_id + u"'")
+#                       messages.error(request, u"Can't find sample in database '" + sample_id + u"'")
                     continue 
                 
                 try:
                     individual = Individual.objects.get(id=sample.individual.id)
                 except Individual.DoesNotExist:
-#                    messages.error(request, u"Can't find sample in database '" + sample_id + u"'")
+#                       messages.error(request, u"Can't find sample in database '" + sample_id + u"'")
                     continue 
                 
-                ## check if this sample has already been added for this individual
+                    ## check if this sample has already been added for this individual
                 if Sample.objects.filter(sample_id=new_sample_id, individual=individual.id).count() > 0:
                     messages.error(request, u"sample_id '" + new_sample_id + u"' already added for this individual")
                     continue
@@ -464,8 +489,16 @@ class BulkUploadAdmin(admin.ModelAdmin):
                 sample.date_created = datetime.datetime.utcnow().replace(tzinfo=utc)
                 sample.last_updated = datetime.datetime.utcnow().replace(tzinfo=utc)
                 sample.save()
+            return
             
-            elif import_data_type == "add_phenotype_values":
+        elif import_data_type == "add_phenotype_values":
+            
+            if file_delimiter == "tab":
+                records = csv.DictReader(request.FILES["file_to_import"], delimiter='\t')
+            else:
+                records = csv.DictReader(request.FILES["file_to_import"])
+            
+            for line in records:   
                 
                 try:
                     centre = line['centre']
@@ -473,6 +506,7 @@ class BulkUploadAdmin(admin.ModelAdmin):
                 except KeyError:
                     messages.error(request, u"Input file is missing required column(s) 'centre centre_id'")
                     return
+                
                 try:
                     source = Source.objects.get(source_name=centre)
                 except Source.DoesNotExist:
@@ -520,7 +554,6 @@ class BulkUploadAdmin(admin.ModelAdmin):
                             affectVal.phenotype = pheno
                             affectVal.individual = ind
                             affectVal.phenotype_value = phenotype_value
-                            affectVal.flagged = False
                             affectVal.date_created = datetime.datetime.utcnow().replace(tzinfo=utc)
                             affectVal.last_updated = datetime.datetime.utcnow().replace(tzinfo=utc)
                         try:
@@ -540,7 +573,6 @@ class BulkUploadAdmin(admin.ModelAdmin):
                             qualVal.phenotype = pheno
                             qualVal.individual = ind
                             qualVal.phenotype_value = phenotype_value
-                            qualVal.flagged = False
                             qualVal.date_created = datetime.datetime.utcnow().replace(tzinfo=utc)
                             qualVal.last_updated = datetime.datetime.utcnow().replace(tzinfo=utc)                        
                         try:
@@ -574,7 +606,6 @@ class BulkUploadAdmin(admin.ModelAdmin):
                             quantVal.phenotype = pheno
                             quantVal.individual = ind
                             quantVal.phenotype_value = phenotype_value
-                            quantVal.flagged = False
                             quantVal.date_created = datetime.datetime.utcnow().replace(tzinfo=utc)
                             quantVal.last_updated = datetime.datetime.utcnow().replace(tzinfo=utc)
                         try:
@@ -583,8 +614,17 @@ class BulkUploadAdmin(admin.ModelAdmin):
                             messages.error(request, u"failed to update " + pheno.phenotype_name + " for " + sampleIndId.individual_string)
                     else:
                         messages.error(request, u"unrecognised phenotype type " + pheno.phenotype_type.phenotype_type)
+            return
+        
+        elif import_data_type == "check_samples_in_warehouse":
             
-            elif import_data_type == "check_samples_in_warehouse":                
+            if file_delimiter == "tab":
+                records = csv.DictReader(request.FILES["file_to_import"], delimiter='\t')
+            else:
+                records = csv.DictReader(request.FILES["file_to_import"])
+        
+            for line in records:
+                           
                 try:
                     sample_id = line['sample_id']                    
                 except KeyError:
@@ -603,7 +643,7 @@ class BulkUploadAdmin(admin.ModelAdmin):
 #                        out_file.write(str(row) + "\n")
                         continue
                                                             
-        return
+            return
 
 class PlatformAdmin(admin.ModelAdmin):
     list_display = ('platform_name', 'platform_type', 'platform_description')
@@ -612,13 +652,13 @@ class PhenotypeAdmin(admin.ModelAdmin):
     list_display = ('phenotype_name', 'phenotype_type', 'phenotype_description')                     
                      
 class StudyAdmin(admin.ModelAdmin):
-    list_display = ('study_name', 'platform', 'study_description', 'data_location', 'last_updated')
+    list_display = ('study_name', 'platform', 'study_description')
     
 class SourceAdmin(admin.ModelAdmin):
     list_display = ('source_name', 'contact_name', 'source_description')
     
 class QCAdmin(admin.ModelAdmin):
-    list_display = ('qc_name', 'qc_description', 'last_updated')
+    list_display = ('qc_name', 'qc_description')
                           
 admin.site.register(Platform, PlatformAdmin)
 admin.site.register(PlatformType)
