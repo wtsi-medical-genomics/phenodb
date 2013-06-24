@@ -102,8 +102,6 @@ class Study(models.Model):
     platform = models.ForeignKey(Platform)
     data_location = models.CharField(max_length=200)
     study_description = models.TextField()
-    date_created = models.DateTimeField()
-    last_updated = models.DateTimeField()
     
     def __unicode__(self):
         return self.study_name
