@@ -1,5 +1,5 @@
 from django.test import TestCase
-from search.models import Individual, Source, IndividualIdentifier, IndividualCollection, PhenodbIdentifier, AffectionStatusPhenotypeValue, QualitativePhenotypeValue, QuantitiatvePhenotypeValue, Sample, StudySample, Phenotype, PhenotypeType, Collection, QC, SampleQC
+from search.models import *
 from django.contrib.auth.models import User
 import datetime
 from django.db import IntegrityError
@@ -13,7 +13,7 @@ from xml.etree import ElementTree as ET
 ## test sources upload
 
 class AdminTest(TestCase):
-    fixtures = ['search_test_data.json']
+    fixtures = ['phenodb_initial_data.json']
     
     def setUp(self):
         ## create an admin user and login
@@ -26,27 +26,27 @@ class AdminTest(TestCase):
         self.client.login(username='test', password='testy')
         # load individuals
         indfh = open('data/test_individual_input.csv', 'r')
-        self.client.post('/admin/search/bulkupload/add/', {'import_data_type': 'individuals', 'file_to_import':indfh, 'file_delimiter': ','})
+        self.client.post('/admin/search/bulkupload/add/', {'import_data_type': 'individuals', 'file_to_import':indfh, 'file_delimiter': 'comma'})
         indfh.close()
         #load samples
         samplefh = open('data/test_individual_input.csv', 'r')
-        self.client.post('/admin/search/bulkupload/add/', {'import_data_type': 'samples', 'file_to_import':samplefh, 'file_delimiter': ','})
+        self.client.post('/admin/search/bulkupload/add/', {'import_data_type': 'samples', 'file_to_import':samplefh, 'file_delimiter': 'comma'})
         samplefh.close()
         # load wtccc1 sample study
         studyfh1 = open('data/test_sample_study_wtccc1.txt', 'r')
-        self.client.post('/admin/search/bulkupload/add/', {'import_data_type': 'study_samples', 'file_to_import':studyfh1, 'study_id': 1, 'file_delimiter': ','})
+        self.client.post('/admin/search/bulkupload/add/', {'import_data_type': 'study_samples', 'file_to_import':studyfh1, 'study_id': 1, 'file_delimiter': 'comma'})
         studyfh1.close()
         # load wtccc2 sample study
         studyfh2 = open('data/test_sample_study_wtccc2.txt', 'r')
-        self.client.post('/admin/search/bulkupload/add/', {'import_data_type': 'study_samples', 'file_to_import':studyfh2, 'study_id': 2, 'file_delimiter': ','})
+        self.client.post('/admin/search/bulkupload/add/', {'import_data_type': 'study_samples', 'file_to_import':studyfh2, 'study_id': 2, 'file_delimiter': 'comma'})
         studyfh2.close()
         
     
     def test_fixture_loaded(self):
         
         self.assertEqual(PhenotypeType.objects.all().count(), 3)
-        self.assertEqual(Source.objects.all().count(), 18)
-        self.assertEqual(Phenotype.objects.all().count(), 40)
+        self.assertEqual(Source.objects.all().count(), 20)
+        self.assertEqual(Phenotype.objects.all().count(), 43)
         self.assertEqual(Collection.objects.all().count(), 1)
                 
         
@@ -113,7 +113,7 @@ class AdminTest(TestCase):
     
         ## load the same test input file again
         fh2 = open('data/test_individual_input.csv', 'r')
-        self.client.post('/admin/search/bulkupload/add/', {'import_data_type': 'individuals', 'file_to_import':fh2, 'file_delimiter': ','})
+        self.client.post('/admin/search/bulkupload/add/', {'import_data_type': 'individuals', 'file_to_import':fh2, 'file_delimiter': 'comma'})
         fh2.close()
           
         self.assertEqual(Individual.objects.all().count(), 12)
@@ -181,14 +181,22 @@ class AdminTest(TestCase):
         self.assertEqual(StudySample.objects.filter(study__study_name='WTCCC1').count(), 8)
         self.assertEqual(StudySample.objects.filter(study__study_name='WTCCC2').count(), 4)
          
-    def test_add_new_sampleID_on_sampleID(self):          
+    def test_add_new_sampleID_on_sampleID_csv(self):          
         
         indid2samplefh = open('data/test_add_new_sampleID_on_sampleID.csv', 'r')
-        self.client.post('/admin/search/bulkupload/add/', {'import_data_type': 'add_sample_on_sample', 'file_to_import':indid2samplefh, 'file_delimiter': ','})
+        self.client.post('/admin/search/bulkupload/add/', {'import_data_type': 'add_sample_on_sample', 'file_to_import':indid2samplefh, 'file_delimiter': 'comma'})
         indid2samplefh.close()
         
         self.assertEqual(Sample.objects.all().count(), 21)
-          
+
+    def test_add_new_sampleID_on_sampleID_tsv(self):          
+        
+        indid2samplefh = open('data/test_add_new_sampleID_on_sampleID.tsv', 'r')
+        self.client.post('/admin/search/bulkupload/add/', {'import_data_type': 'add_sample_on_sample', 'file_to_import':indid2samplefh, 'file_delimiter': 'tab'})
+        indid2samplefh.close()
+        
+        self.assertEqual(Sample.objects.all().count(), 21)
+        
     def test_bulkadd_phenotype_to_individual(self):
           
         ## test that you can bulk upload a file of new/updated phenotypes for existing individuals
@@ -203,7 +211,7 @@ class AdminTest(TestCase):
           
         ## open test input file
         fh = open('data/test_add_phenotype.csv', 'r')
-        self.client.post('/admin/search/bulkupload/add/', {'import_data_type': 'add_phenotype_values', 'file_to_import':fh, 'file_delimiter': ','})
+        self.client.post('/admin/search/bulkupload/add/', {'import_data_type': 'add_phenotype_values', 'file_to_import':fh, 'file_delimiter': 'comma'})
         fh.close()
           
         self.assertEqual(QuantitiatvePhenotypeValue.objects.filter(phenotype__phenotype_name="Test").count(), 5)
@@ -255,7 +263,7 @@ class AdminTest(TestCase):
         qc.save()
         
         fh = open('data/test_upload_sample_qc.txt', 'r')
-        self.client.post('/admin/search/bulkupload/add/', {'import_data_type': 'sample_qc', 'file_to_import':fh, 'file_delimiter': '\t', 'study_id': 1, 'qc_id': 1})
+        self.client.post('/admin/search/bulkupload/add/', {'import_data_type': 'sample_qc', 'file_to_import':fh, 'file_delimiter': 'tab', 'study_id': 1, 'qc_id': 1})
         fh.close()
         
         self.assertEqual(SampleQC.objects.all().count(), 8)
@@ -268,7 +276,7 @@ class QueryTest(TestCase):
     ## TODO:create a fixture with individual and sample data
     ## for now load some individuals and samples using admin scripts
       
-    fixtures = ['search_test_data.json']
+    fixtures = ['phenodb_initial_data.json']
       
     def setUp(self):
         ## create an admin user and login
@@ -281,86 +289,102 @@ class QueryTest(TestCase):
         self.client.login(username='test', password='testy')
         # load individuals
         indfh = open('data/test_individual_input.csv', 'r')
-        self.client.post('/admin/search/bulkupload/add/', {'import_data_type': 'individuals', 'file_to_import':indfh, 'file_delimiter': ','})
+        self.client.post('/admin/search/bulkupload/add/', {'import_data_type': 'individuals', 'file_to_import':indfh, 'file_delimiter': 'comma'})
         indfh.close()
         #load samples
         samplefh = open('data/test_individual_input.csv', 'r')
-        self.client.post('/admin/search/bulkupload/add/', {'import_data_type': 'samples', 'file_to_import':samplefh, 'file_delimiter': ','})
+        self.client.post('/admin/search/bulkupload/add/', {'import_data_type': 'samples', 'file_to_import':samplefh, 'file_delimiter': 'comma'})
         samplefh.close()
         # load wtccc1 sample study
         studyfh1 = open('data/test_sample_study_wtccc1.txt', 'r')
-        self.client.post('/admin/search/bulkupload/add/', {'import_data_type': 'study_samples', 'file_to_import':studyfh1, 'study_id': 1, 'file_delimiter': ','})
+        self.client.post('/admin/search/bulkupload/add/', {'import_data_type': 'study_samples', 'file_to_import':studyfh1, 'study_id': 1, 'file_delimiter': 'comma'})
         studyfh1.close()
         # load wtccc2 sample study
         studyfh2 = open('data/test_sample_study_wtccc2.txt', 'r')
-        self.client.post('/admin/search/bulkupload/add/', {'import_data_type': 'study_samples', 'file_to_import':studyfh2, 'study_id': 2, 'file_delimiter': ','})
+        self.client.post('/admin/search/bulkupload/add/', {'import_data_type': 'study_samples', 'file_to_import':studyfh2, 'study_id': 2, 'file_delimiter': 'comma'})
         studyfh2.close()   
       
     def test_query_builder(self):
   
+        # get the phenotype primary key first 
+        ibd_affection_status = Phenotype.objects.get(phenotype_name="IBD affection status")
+        sex                  = Phenotype.objects.get(phenotype_name="Sex")
+        yob                  = Phenotype.objects.get(phenotype_name="Year of birth")
+        disease_type         = Phenotype.objects.get(phenotype_name="Disease type")
+        
+        oxford    = Source.objects.get(source_name = "OXFORD")
+        cambridge = Source.objects.get(source_name="CAMBRIDGE")
+        
+        wtccc1 = Study.objects.get(study_name="WTCCC1")
+        wtccc2 = Study.objects.get(study_name="WTCCC2")
+        
+        affy500k = Platform.objects.get(platform_name="Affy500K")
+        affy6    = Platform.objects.get(platform_name="Affy6.0")
+        
+  
 #        single phenotype
-        response = self.client.post('/search/querybuilder/', {'from': 'phenotype', 'where': '21', 'is': 'true', 'searchIn': 'all', 'output': 'PhenodbID', 'andor': 'and'})
+        response = self.client.post('/search/querybuilder/', {'from': 'phenotype', 'where': ibd_affection_status.pk, 'is': 'true', 'searchIn': 'all', 'output': 'PhenodbID', 'andor': 'and'})
         self.assertEqual(response.context['count'], 12)
 #        null queries
-        response = self.client.post('/search/querybuilder/', {'from': ['phenotype'], 'where': ['1'], 'is': ['notnull'], 'searchIn': 'all', 'output': ['PhenodbID'], 'andor': ['or']})
+        response = self.client.post('/search/querybuilder/', {'from': ['phenotype'], 'where': [sex.pk], 'is': ['notnull'], 'searchIn': 'all', 'output': ['PhenodbID'], 'andor': ['or']})
         self.assertEqual(response.context['count'], 12)
-        response = self.client.post('/search/querybuilder/', {'from': ['phenotype'], 'where': ['1'], 'is': ['isnull'], 'searchIn': 'all', 'output': ['PhenodbID'], 'andor': ['or']})
+        response = self.client.post('/search/querybuilder/', {'from': ['phenotype'], 'where': [sex.pk], 'is': ['isnull'], 'searchIn': 'all', 'output': ['PhenodbID'], 'andor': ['or']})
         self.assertEqual(response.context['message'], "Sorry your query didn't return any results, please try another query.")
 #        numerical query
-        response = self.client.post('/search/querybuilder/', {'from': ['phenotype'], 'where': ['2'], 'is': ['gt'], 'querystr': ['1960'], 'searchIn': 'all', 'output': ['PhenodbID'], 'andor': ['and']})
+        response = self.client.post('/search/querybuilder/', {'from': ['phenotype'], 'where': [yob.pk], 'is': ['gt'], 'querystr': ['1960'], 'searchIn': 'all', 'output': ['PhenodbID'], 'andor': ['and']})
         self.assertEqual(response.context['count'], 3)
 #        multiple phenotypes and
-        response = self.client.post('/search/querybuilder/', {'from': ['phenotype','phenotype'], 'where': ['21','3'], 'is': ['true','eq'], 'querystr': ['Ulcerative Colitis'], 'searchIn': 'all', 'output': ['PhenodbID'], 'andor': ['and','and']})
+        response = self.client.post('/search/querybuilder/', {'from': ['phenotype','phenotype'], 'where': [ibd_affection_status.pk, disease_type.pk], 'is': ['true','eq'], 'querystr': ['Ulcerative Colitis'], 'searchIn': 'all', 'output': ['PhenodbID'], 'andor': ['and','and']})
         self.assertEqual(response.context['count'], 10)
 #        multiple phenotypes or
-        response = self.client.post('/search/querybuilder/', {'from': ['phenotype','phenotype'], 'where': ['21','3'], 'is': ['true','eq'], 'querystr': ['Ulcerative Colitis'], 'searchIn': 'all', 'output': ['PhenodbID'], 'andor': ['or','and']})
+        response = self.client.post('/search/querybuilder/', {'from': ['phenotype','phenotype'], 'where': [ibd_affection_status.pk, disease_type.pk], 'is': ['true','eq'], 'querystr': ['Ulcerative Colitis'], 'searchIn': 'all', 'output': ['PhenodbID'], 'andor': ['or','and']})
         self.assertEqual(response.context['count'], 12)
   
 #        user list, single phenotye, source_ids+source        
         sourceIDsfh = open('data/test_search_individual_source_ids.txt', 'r')
-        response = self.client.post('/search/querybuilder/', {'from': ['phenotype'], 'where': ['21'], 'is': ['true'], 'searchIn': 'userlist', 'individual_file': sourceIDsfh, 'output': ['PhenodbID'], 'andor': ['and']})
+        response = self.client.post('/search/querybuilder/', {'from': ['phenotype'], 'where': [ibd_affection_status.pk], 'is': ['true'], 'searchIn': 'userlist', 'individual_file': sourceIDsfh, 'output': ['PhenodbID'], 'andor': ['and']})
         self.assertEqual(response.context['count'], 3)
 #        user list, single phenotye, phenodb ids
         phenoIDsfh = open('data/test_search_individual_phenodb_ids.txt', 'r')
-        response = self.client.post('/search/querybuilder/', {'from': ['phenotype'], 'where': ['21'], 'is': ['true'], 'searchIn': 'userlist', 'individual_file': phenoIDsfh, 'output': ['PhenodbID'], 'andor': ['and']})
+        response = self.client.post('/search/querybuilder/', {'from': ['phenotype'], 'where': [ibd_affection_status.pk], 'is': ['true'], 'searchIn': 'userlist', 'individual_file': phenoIDsfh, 'output': ['PhenodbID'], 'andor': ['and']})
         self.assertEqual(response.context['count'], 5)
 #        user list, multiple phenotyes, and
         sourceIDsfh = open('data/test_search_individual_source_ids.txt', 'r')
-        response = self.client.post('/search/querybuilder/', {'from': ['phenotype','phenotype'], 'where': ['21','3'], 'is': ['true','eq'], 'querystr': ['ulcerative colitis'], 'searchIn': 'userlist', 'individual_file': sourceIDsfh, 'output': ['PhenodbID'], 'andor': ['and','and']})
+        response = self.client.post('/search/querybuilder/', {'from': ['phenotype','phenotype'], 'where': [ibd_affection_status.pk, disease_type.pk], 'is': ['true','eq'], 'querystr': ['ulcerative colitis'], 'searchIn': 'userlist', 'individual_file': sourceIDsfh, 'output': ['PhenodbID'], 'andor': ['and','and']})
         self.assertEqual(response.context['count'], 2)
 #        user list, multiple phenotyes, or
         sourceIDsfh = open('data/test_search_individual_source_ids.txt', 'r')
-        response = self.client.post('/search/querybuilder/', {'from': ['phenotype','phenotype'], 'where': ['3','3'], 'is': ['eq','eq'], 'querystr': ['ulcerative colitis','crohn\'s disease'], 'searchIn': 'userlist', 'individual_file': sourceIDsfh, 'output': ['PhenodbID'], 'andor': ['or','and']})
+        response = self.client.post('/search/querybuilder/', {'from': ['phenotype','phenotype'], 'where': [disease_type.pk, disease_type.pk], 'is': ['eq','eq'], 'querystr': ['ulcerative colitis','crohn\'s disease'], 'searchIn': 'userlist', 'individual_file': sourceIDsfh, 'output': ['PhenodbID'], 'andor': ['or','and']})
         self.assertEqual(response.context['count'], 3)
   
 #        single source
-        response = self.client.post('/search/querybuilder/', {'from': 'source', 'where': '13', 'searchIn': 'all', 'output': 'PhenodbID', 'andor': 'and'})
+        response = self.client.post('/search/querybuilder/', {'from': 'source', 'where': oxford.pk, 'searchIn': 'all', 'output': 'PhenodbID', 'andor': 'and'})
         self.assertEqual(response.context['count'], 8)
 #        multiple source and
-        response = self.client.post('/search/querybuilder/', {'from': ['source','source'], 'where': ['13','1'], 'searchIn': 'all', 'output': ['PhenodbID'], 'andor': ['and','and']})
+        response = self.client.post('/search/querybuilder/', {'from': ['source','source'], 'where': [oxford.pk, cambridge.pk], 'searchIn': 'all', 'output': ['PhenodbID'], 'andor': ['and','and']})
         self.assertEqual(response.context['message'], "Sorry your query didn't return any results, please try another query.")
 #        multiple source or
-        response = self.client.post('/search/querybuilder/', {'from': ['source','source'], 'where': ['13','1'], 'searchIn': 'all', 'output': ['PhenodbID'], 'andor': ['or','or']})
+        response = self.client.post('/search/querybuilder/', {'from': ['source','source'], 'where': [oxford.pk, cambridge.pk], 'searchIn': 'all', 'output': ['PhenodbID'], 'andor': ['or','or']})
         self.assertEqual(response.context['count'], 12)
   
 #        single study
-        response = self.client.post('/search/querybuilder/', {'from': ['study'], 'where': ['1'], 'searchIn': 'all', 'output': ['PhenodbID'], 'andor': ['and']})
+        response = self.client.post('/search/querybuilder/', {'from': ['study'], 'where': [wtccc1.pk], 'searchIn': 'all', 'output': ['PhenodbID'], 'andor': ['and']})
         self.assertEqual(response.context['count'], 8)
 #        multiple studies and
-        response = self.client.post('/search/querybuilder/', {'from': ['study','study'], 'where': ['1','2'], 'searchIn': 'all', 'output': ['PhenodbID'], 'andor': ['and','and']})
+        response = self.client.post('/search/querybuilder/', {'from': ['study','study'], 'where': [wtccc1.pk, wtccc2.pk], 'searchIn': 'all', 'output': ['PhenodbID'], 'andor': ['and','and']})
         self.assertEqual(response.context['message'], "Sorry your query didn't return any results, please try another query.")
 #        multiple studies or 
-        response = self.client.post('/search/querybuilder/', {'from': ['study','study'], 'where': ['1','2'], 'searchIn': 'all', 'output': ['PhenodbID'], 'andor': ['or','or']})
+        response = self.client.post('/search/querybuilder/', {'from': ['study','study'], 'where': [wtccc1.pk, wtccc2.pk], 'searchIn': 'all', 'output': ['PhenodbID'], 'andor': ['or','or']})
         self.assertEqual(response.context['count'], 12)
           
 #        single platform
-        response = self.client.post('/search/querybuilder/', {'from': ['platform'], 'where': ['1'], 'searchIn': 'all', 'output': ['PhenodbID'], 'andor': ['and']})
+        response = self.client.post('/search/querybuilder/', {'from': ['platform'], 'where': [affy6.pk], 'searchIn': 'all', 'output': ['PhenodbID'], 'andor': ['and']})
         self.assertEqual(response.context['count'], 8)
-#        multiple studies and
-        response = self.client.post('/search/querybuilder/', {'from': ['platform','platform'], 'where': ['1','2'], 'searchIn': 'all', 'output': ['PhenodbID'], 'andor': ['and','and']})
+#        multiple platforms and
+        response = self.client.post('/search/querybuilder/', {'from': ['platform','platform'], 'where': [affy6.pk, affy500k.pk], 'searchIn': 'all', 'output': ['PhenodbID'], 'andor': ['and','and']})
         self.assertEqual(response.context['message'], "Sorry your query didn't return any results, please try another query.")
-#        multiple studies or 
-        response = self.client.post('/search/querybuilder/', {'from': ['platform','platform'], 'where': ['1','2'], 'searchIn': 'all', 'output': ['PhenodbID'], 'andor': ['or','or']})
+#        multiple platforms or 
+        response = self.client.post('/search/querybuilder/', {'from': ['platform','platform'], 'where': [affy6.pk, affy500k.pk], 'searchIn': 'all', 'output': ['PhenodbID'], 'andor': ['or','or']})
         self.assertEqual(response.context['count'], 12)
   
 #        search using sample ids only
