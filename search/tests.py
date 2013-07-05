@@ -25,19 +25,23 @@ class AdminTest(TestCase):
         
         self.client.login(username='test', password='testy')
         # load individuals
-        indfh = open('data/test_individual_input.csv', 'r')
+        indfh = open('data/test/test_individual_input.csv', 'r')
         self.client.post('/admin/search/bulkupload/add/', {'import_data_type': 'individuals', 'file_to_import':indfh, 'file_delimiter': 'comma'})
         indfh.close()
         #load samples
-        samplefh = open('data/test_individual_input.csv', 'r')
+        samplefh = open('data/test/test_individual_input.csv', 'r')
         self.client.post('/admin/search/bulkupload/add/', {'import_data_type': 'samples', 'file_to_import':samplefh, 'file_delimiter': 'comma'})
         samplefh.close()
+        # load individuals again
+        indfh = open('data/test/test_individual_input2.csv', 'r')
+        self.client.post('/admin/search/bulkupload/add/', {'import_data_type': 'individuals', 'file_to_import':indfh, 'file_delimiter': 'comma'})
+        indfh.close()
         # load wtccc1 sample study
-        studyfh1 = open('data/test_sample_study_wtccc1.txt', 'r')
+        studyfh1 = open('data/test/test_sample_study_wtccc1.txt', 'r')
         self.client.post('/admin/search/bulkupload/add/', {'import_data_type': 'study_samples', 'file_to_import':studyfh1, 'study_id': 1, 'file_delimiter': 'comma'})
         studyfh1.close()
         # load wtccc2 sample study
-        studyfh2 = open('data/test_sample_study_wtccc2.txt', 'r')
+        studyfh2 = open('data/test/test_sample_study_wtccc2.txt', 'r')
         self.client.post('/admin/search/bulkupload/add/', {'import_data_type': 'study_samples', 'file_to_import':studyfh2, 'study_id': 2, 'file_delimiter': 'comma'})
         studyfh2.close()
         
@@ -48,14 +52,28 @@ class AdminTest(TestCase):
         self.assertEqual(Source.objects.all().count(), 20)
         self.assertEqual(Phenotype.objects.all().count(), 43)
         self.assertEqual(Collection.objects.all().count(), 1)
-                
+    
+#     def test_file_format(self):
+#         ## make sure an error is raised and reported to the user in the file format is incorrect
+#         #individual input file
+#         indfh = open('data/test/test_individual_input_bad.csv', 'r')
+#         response = self.client.post('/admin/search/bulkupload/add/', {'import_data_type': 'individuals', 'file_to_import':indfh, 'file_delimiter': 'comma'})
+#         indfh.close()
+#         self.assertContains(response, "Input file is missing required column(s) 'centre centre_id'", 302)
+#         
+#         #sample input file
+#         samplefh = open('data/test/test_individual_input_bad.csv', 'r')
+#         response = self.client.post('/admin/search/bulkupload/add/', {'import_data_type': 'samples', 'file_to_import':samplefh, 'file_delimiter': 'comma'})
+#         samplefh.close()
+#         self.assertContains(response, "Input file is missing required column(s) 'centre centre_id sample_id'", 302)
+        
         
     def test_individual_upload(self):
         
         inds = Individual.objects.all()
         
         self.assertEqual(Individual.objects.all().count(), 12)
-        self.assertEqual(IndividualIdentifier.objects.all().count(), 12)
+        self.assertEqual(IndividualIdentifier.objects.all().count(), 13)
         self.assertEqual(PhenodbIdentifier.objects.all().count(), 12)
         self.assertEqual(IndividualCollection.objects.all().count(), 11)
         
@@ -81,8 +99,10 @@ class AdminTest(TestCase):
         self.assertEqual(QualitativePhenotypeValue.objects.get(individual=inds[0],phenotype__phenotype_name="Smoking status").phenotype_value, "No")
           
         self.assertEqual(inds[1].active_id, None)
-        self.assertEqual(IndividualIdentifier.objects.get(individual = inds[1]).individual_string, "84")
-        self.assertEqual(IndividualIdentifier.objects.get(individual = inds[1]).source.source_name, "OXFORD")
+        self.assertEqual(IndividualIdentifier.objects.filter(individual = inds[1])[0].individual_string, "84")
+        self.assertEqual(IndividualIdentifier.objects.filter(individual = inds[1])[1].individual_string, "84_b")
+        self.assertEqual(IndividualIdentifier.objects.filter(individual = inds[1])[0].source.source_name, "OXFORD")
+        self.assertEqual(IndividualIdentifier.objects.filter(individual = inds[1])[1].source.source_name, "OXFORD")
         self.assertEqual(PhenodbIdentifier.objects.get(individual = inds[1]).phenodb_id, "pdb2")
         self.assertEqual(IndividualCollection.objects.get(individual = inds[1]).collection.collection_name, "UKIBDGC")
           
@@ -112,12 +132,12 @@ class AdminTest(TestCase):
     def test_individual_source_unique(self):
     
         ## load the same test input file again
-        fh2 = open('data/test_individual_input.csv', 'r')
+        fh2 = open('data/test/test_individual_input.csv', 'r')
         self.client.post('/admin/search/bulkupload/add/', {'import_data_type': 'individuals', 'file_to_import':fh2, 'file_delimiter': 'comma'})
         fh2.close()
           
         self.assertEqual(Individual.objects.all().count(), 12)
-        self.assertEqual(IndividualIdentifier.objects.all().count(), 12)
+        self.assertEqual(IndividualIdentifier.objects.all().count(), 13)
         self.assertEqual(PhenodbIdentifier.objects.all().count(), 12)
         self.assertEqual(IndividualCollection.objects.all().count(), 11)
           
@@ -180,10 +200,22 @@ class AdminTest(TestCase):
   
         self.assertEqual(StudySample.objects.filter(study__study_name='WTCCC1').count(), 8)
         self.assertEqual(StudySample.objects.filter(study__study_name='WTCCC2').count(), 4)
+        
+        ## check that missing samples are entered in the missing samples table
+        self.assertEqual(MissingSampleID.objects.all().count(), 2)
+        
+        ## check that after adding the samples they are removed from the table
+        samplefh = open('data/test/test_missing_samples.csv', 'r')
+        self.client.post('/admin/search/bulkupload/add/', {'import_data_type': 'samples', 'file_to_import':samplefh, 'file_delimiter': 'comma'})
+        samplefh.close()
+        self.assertEqual(MissingSampleID.objects.all().count(), 0)
+        
+        ## check that the samples are also added to the studies they belong
+        self.assertEqual(StudySample.objects.filter(study__study_name='WTCCC1').count(), 10)
          
     def test_add_new_sampleID_on_sampleID_csv(self):          
         
-        indid2samplefh = open('data/test_add_new_sampleID_on_sampleID.csv', 'r')
+        indid2samplefh = open('data/test/test_add_new_sampleID_on_sampleID.csv', 'r')
         self.client.post('/admin/search/bulkupload/add/', {'import_data_type': 'add_sample_on_sample', 'file_to_import':indid2samplefh, 'file_delimiter': 'comma'})
         indid2samplefh.close()
         
@@ -191,7 +223,7 @@ class AdminTest(TestCase):
 
     def test_add_new_sampleID_on_sampleID_tsv(self):          
         
-        indid2samplefh = open('data/test_add_new_sampleID_on_sampleID.tsv', 'r')
+        indid2samplefh = open('data/test/test_add_new_sampleID_on_sampleID.tsv', 'r')
         self.client.post('/admin/search/bulkupload/add/', {'import_data_type': 'add_sample_on_sample', 'file_to_import':indid2samplefh, 'file_delimiter': 'tab'})
         indid2samplefh.close()
         
@@ -210,7 +242,7 @@ class AdminTest(TestCase):
         phenotype.save()
           
         ## open test input file
-        fh = open('data/test_add_phenotype.csv', 'r')
+        fh = open('data/test/test_add_phenotype.csv', 'r')
         self.client.post('/admin/search/bulkupload/add/', {'import_data_type': 'add_phenotype_values', 'file_to_import':fh, 'file_delimiter': 'comma'})
         fh.close()
           
@@ -262,13 +294,13 @@ class AdminTest(TestCase):
         qc.last_updated = datetime.datetime.now()
         qc.save()
         
-        fh = open('data/test_upload_sample_qc.txt', 'r')
+        fh = open('data/test/test_upload_sample_qc.txt', 'r')
         self.client.post('/admin/search/bulkupload/add/', {'import_data_type': 'sample_qc', 'file_to_import':fh, 'file_delimiter': 'tab', 'study_id': 1, 'qc_id': 1})
         fh.close()
         
         self.assertEqual(SampleQC.objects.all().count(), 8)
         self.assertEqual(SampleQC.objects.filter(qc_pass=True).count(), 4)
-        self.assertEqual(SampleQC.objects.filter(qc_pass=False).count(), 4)
+        self.assertEqual(SampleQC.objects.filter(qc_pass=False).count(), 4)        
         
 
 class QueryTest(TestCase):
@@ -288,19 +320,19 @@ class QueryTest(TestCase):
         
         self.client.login(username='test', password='testy')
         # load individuals
-        indfh = open('data/test_individual_input.csv', 'r')
+        indfh = open('data/test/test_individual_input.csv', 'r')
         self.client.post('/admin/search/bulkupload/add/', {'import_data_type': 'individuals', 'file_to_import':indfh, 'file_delimiter': 'comma'})
         indfh.close()
         #load samples
-        samplefh = open('data/test_individual_input.csv', 'r')
+        samplefh = open('data/test/test_individual_input.csv', 'r')
         self.client.post('/admin/search/bulkupload/add/', {'import_data_type': 'samples', 'file_to_import':samplefh, 'file_delimiter': 'comma'})
         samplefh.close()
         # load wtccc1 sample study
-        studyfh1 = open('data/test_sample_study_wtccc1.txt', 'r')
+        studyfh1 = open('data/test/test_sample_study_wtccc1.txt', 'r')
         self.client.post('/admin/search/bulkupload/add/', {'import_data_type': 'study_samples', 'file_to_import':studyfh1, 'study_id': 1, 'file_delimiter': 'comma'})
         studyfh1.close()
         # load wtccc2 sample study
-        studyfh2 = open('data/test_sample_study_wtccc2.txt', 'r')
+        studyfh2 = open('data/test/test_sample_study_wtccc2.txt', 'r')
         self.client.post('/admin/search/bulkupload/add/', {'import_data_type': 'study_samples', 'file_to_import':studyfh2, 'study_id': 2, 'file_delimiter': 'comma'})
         studyfh2.close()   
       
@@ -341,19 +373,19 @@ class QueryTest(TestCase):
         self.assertEqual(response.context['count'], 12)
   
 #        user list, single phenotye, source_ids+source        
-        sourceIDsfh = open('data/test_search_individual_source_ids.txt', 'r')
+        sourceIDsfh = open('data/test/test_search_individual_source_ids.txt', 'r')
         response = self.client.post('/search/querybuilder/', {'from': ['phenotype'], 'where': [ibd_affection_status.pk], 'is': ['true'], 'searchIn': 'userlist', 'individual_file': sourceIDsfh, 'output': ['PhenodbID'], 'andor': ['and']})
         self.assertEqual(response.context['count'], 3)
 #        user list, single phenotye, phenodb ids
-        phenoIDsfh = open('data/test_search_individual_phenodb_ids.txt', 'r')
+        phenoIDsfh = open('data/test/test_search_individual_phenodb_ids.txt', 'r')
         response = self.client.post('/search/querybuilder/', {'from': ['phenotype'], 'where': [ibd_affection_status.pk], 'is': ['true'], 'searchIn': 'userlist', 'individual_file': phenoIDsfh, 'output': ['PhenodbID'], 'andor': ['and']})
         self.assertEqual(response.context['count'], 5)
 #        user list, multiple phenotyes, and
-        sourceIDsfh = open('data/test_search_individual_source_ids.txt', 'r')
+        sourceIDsfh = open('data/test/test_search_individual_source_ids.txt', 'r')
         response = self.client.post('/search/querybuilder/', {'from': ['phenotype','phenotype'], 'where': [ibd_affection_status.pk, disease_type.pk], 'is': ['true','eq'], 'querystr': ['ulcerative colitis'], 'searchIn': 'userlist', 'individual_file': sourceIDsfh, 'output': ['PhenodbID'], 'andor': ['and','and']})
         self.assertEqual(response.context['count'], 2)
 #        user list, multiple phenotyes, or
-        sourceIDsfh = open('data/test_search_individual_source_ids.txt', 'r')
+        sourceIDsfh = open('data/test/test_search_individual_source_ids.txt', 'r')
         response = self.client.post('/search/querybuilder/', {'from': ['phenotype','phenotype'], 'where': [disease_type.pk, disease_type.pk], 'is': ['eq','eq'], 'querystr': ['ulcerative colitis','crohn\'s disease'], 'searchIn': 'userlist', 'individual_file': sourceIDsfh, 'output': ['PhenodbID'], 'andor': ['or','and']})
         self.assertEqual(response.context['count'], 3)
   
@@ -388,7 +420,7 @@ class QueryTest(TestCase):
         self.assertEqual(response.context['count'], 12)
   
 #        search using sample ids only
-        sampleIDsfh = open('data/test_search_sample_ids.txt', 'r')
+        sampleIDsfh = open('data/test/test_search_sample_ids.txt', 'r')
         response = self.client.post('/search/querybuilder/', {'from': ['message'], 'where': [''], 'is': [''], 'searchIn': 'userlist', 'individual_file': sampleIDsfh, 'output': ['PhenodbID'], 'andor': ['and']})
         self.assertEqual(response.context['count'], 12)
 #        test ignoring case on ind/sample id searches
