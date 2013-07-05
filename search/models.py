@@ -203,6 +203,13 @@ class SampleQC(models.Model):
     
     class Meta:
         unique_together = ('study_sample', 'qc',)
+
+class MissingSampleID(models.Model):
+    sample_id = models.CharField(max_length=100)
+    study = models.ForeignKey(Study)
+    
+    class Meta:
+        unique_together = ('sample_id', 'study',)
     
 class BulkUpload(models.Model):
     pass    
