@@ -34,9 +34,9 @@
 	var margin = {
 		top : 20,
 		right : 20,
-		bottom : 100,
+		bottom : 200,
 		left : 40
-	}, width = 960 - margin.left - margin.right, height = 500 - margin.top - margin.bottom;
+	}, width = 960 - margin.left - margin.right, height = 600 - margin.top - margin.bottom;
 
 	var x = d3.scale.ordinal().rangeRoundBands([0, width], .1, 1);
 
@@ -64,7 +64,7 @@
 		var axis = svg.append("g").attr("class", "x axis").attr("transform", "translate(0," + height + ")").call(xAxis);
 		
 		//axis.selectAll("text").attr("transform", function(d) { return "rotate(90)translate(" + this.getBBox().height/2 + "," + this.getBBox().width/2 + ")";});		
-		axis.selectAll("text").attr("transform", function(d) { return "rotate(90)translate(" + (this.getBBox().height/2+40)  + "," + (this.getBBox().width/2-40) + ")";});	
+		axis.selectAll("text").attr("transform", function(d) { return "rotate(50)translate(" + 80  + "," + -10 + ")";});	
 		
 		svg.append("g").attr("class", "y axis").call(yAxis).append("text").attr("transform", "rotate(-90)").attr("y", 6).attr("dy", ".71em").style("text-anchor", "end").text("count");
 
