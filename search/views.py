@@ -13,8 +13,8 @@ import sys
 sys.stdout = sys.stderr
 
 # internal imports
-from search.models import IndividualIdentifier, AffectionStatusPhenotypeValue, QualitativePhenotypeValue, QuantitiatvePhenotypeValue, Phenotype, Platform, Individual, Study, Sample, Source, QC, Collection, StudySample, PhenodbIdentifier
-from search.tables import PhenotypeTable, PlatformTable, StudyTable, QCTable, SourceTable, CollectionTable
+from search.models import IndividualIdentifier, AffectionStatusPhenotypeValue, QualitativePhenotypeValue, QuantitiatvePhenotypeValue, Phenotype, Platform, Individual, Study, Sample, Source, QC, Collection, StudySample, PhenodbIdentifier, MissingSampleID
+from search.tables import PhenotypeTable, PlatformTable, StudyTable, QCTable, SourceTable, CollectionTable, MissingTable, MissingStudyTable
 
 def home(request):
     return render(request, 'search/home.html', {})
@@ -37,6 +37,18 @@ def showSources(request):
 
 def showCollections(request):
     table = CollectionTable(Collection.objects.all())
+    return render(request, 'search/dataview.html', {'table': table})
+
+def showMissing(request):
+    study_counts = []
+    for study in Study.objects.all():
+        study_counts.append({'study_id': study.id, 'study_name': study.study_name, 'missing_sample_count': MissingSampleID.objects.filter(study_id=study.id).count()})
+            
+    table = MissingTable(study_counts)
+    return render(request, 'search/dataview.html', {'table': table})
+
+def showMissingStudy(request, study_id):    
+    table = MissingStudyTable(MissingSampleID.objects.filter(study_id=study_id))
     return render(request, 'search/dataview.html', {'table': table})
 
 def showPhenotypes(request):
@@ -83,7 +95,7 @@ def showIndividuals(request):
 def getIndividualData(request):
     source_counts = []
     for source in Source.objects.all():
-        source_counts.append({'value': source.source_name, 'count': IndividualIdentifier.objects.filter(source_id=source.id).count()})
+        source_counts.append({'value': source.source_name, 'count': IndividualIdentifier.objects.filter(source_id=source.id).values('individual_id').distinct().count()})
             
     fieldnames = ['value','count']
     headers = dict( (n,n) for n in fieldnames )
