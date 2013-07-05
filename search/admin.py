@@ -59,8 +59,9 @@ class BulkUploadForm(forms.ModelForm):
     file_to_import = forms.FileField(help_text = file_format_description)
     
     delimiter_options = (
-        ('tab','Tab'),
-        ('comma', 'Comma')
+        ('comma', 'Comma'),
+        ('tab','Tab')
+        
     )    
     file_delimiter = forms.ChoiceField(delimiter_options, help_text = "Select the delimeter used in the file")
     
@@ -84,17 +85,31 @@ class BulkUploadAdmin(admin.ModelAdmin):
         
         if import_data_type == "study_samples":                
             
-            study_id = request.POST["study_id"]
-            study = Study.objects.get(id=study_id)
+            study = Study.objects.get(id=request.POST["study_id"])
+            
+            sample_total = 0;
+            insert_total = 0;
             
             for line in request.FILES["file_to_import"]:
+                
+                sample_total += 1                
                 sample_id = line.strip()
                 
-                try:
-                    sample = Sample.objects.get(sample_id=sample_id)
-                except Sample.DoesNotExist:
-                    messages.error(request, u"Can't find sample in database '" + sample_id + u"'")
-                    continue                                
+                if Sample.objects.filter(sample_id=sample_id).count() > 0:
+                    sample = Sample.objects.filter(sample_id=sample_id)[0]
+                else:
+                    ## make sure the string in not empty
+                    if sample_id:
+                        missingSampleID = MissingSampleID();
+                        missingSampleID.sample_id = sample_id
+                        missingSampleID.study = study
+                        try:
+                            missingSampleID.save()
+                        except IntegrityError:
+                            ## already entered in the database so just pass
+                            pass
+                    
+                    continue
                 
                 studySample = StudySample()
                 studySample.sample = sample
@@ -105,8 +120,11 @@ class BulkUploadAdmin(admin.ModelAdmin):
                 try:
                     studySample.save()
                 except IntegrityError:
-                    messages.error(request, u"Sample " + sample_id + " and study " + study_id + " is already in the database")
-                    continue        
+                    continue
+                
+                insert_total += 1
+            
+            messages.error(request, str(insert_total) + " of " + str(sample_total) + u" samples successfully inserted into the database")
             return
         
         elif import_data_type == "sample_qc":
@@ -172,7 +190,8 @@ class BulkUploadAdmin(admin.ModelAdmin):
             for line in records:
                 try:
                     centre = line['centre']
-                    centre_id = line['centre_id']                    
+                    centre_id = line['centre_id']
+                    sample_id = line['sample_id']                    
                 except KeyError:
                     messages.error(request, u"Input file is missing required column(s) 'centre centre_id'")
                     return     
@@ -187,6 +206,30 @@ class BulkUploadAdmin(admin.ModelAdmin):
                 if IndividualIdentifier.objects.filter(individual_string=centre_id,source_id=source.id).count() > 0:
                     messages.error(request, u"Individual '" + centre_id + u"' already added for this source")
                     continue
+                
+                ## the individual id from another file might be similar but not exactly the same
+                ## check if the sample id and source are the same, if they are then add an individual identifier
+                
+                try:
+                    if Sample.objects.get(sample_id=sample_id):
+                
+                        sample = Sample.objects.get(sample_id=sample_id)
+                        if IndividualIdentifier.objects.get(individual=sample.individual, source__source_name=centre):
+                        
+                            ## add a individual identifier
+                            indId = IndividualIdentifier()
+                            indId.individual = sample.individual
+                            indId.individual_string = centre_id                
+                            indId.source = source
+                            indId.date_created = datetime.datetime.utcnow().replace(tzinfo=utc)
+                            indId.last_updated = datetime.datetime.utcnow().replace(tzinfo=utc)                
+                            try:
+                                indId.save()
+                            except IntegrityError:
+                                messages.error(request, u"centre_id " + centre_id + " is already in the database")
+                            continue
+                except Sample.DoesNotExist:
+                    pass
                 
                 ## an empty active_id field means that the object refers to itself!
                 ## if the active_id field is not empty, that means it refers to another individual object
@@ -373,13 +416,14 @@ class BulkUploadAdmin(admin.ModelAdmin):
         
         elif import_data_type == "samples":
             
-            warehouseCursor = connections['warehouse'].cursor()
+            
             if file_delimiter == "tab":
                 records = csv.DictReader(request.FILES["file_to_import"], delimiter='\t')
             else:
                 records = csv.DictReader(request.FILES["file_to_import"])
             
             for line in records:
+                
                 try:
                     centre = line['centre']
                     centre_id = line['centre_id']
@@ -403,7 +447,7 @@ class BulkUploadAdmin(admin.ModelAdmin):
                 
                 ## check that a sample has not already been entered for the ind with the same name
                 if Sample.objects.filter(individual=sampleIndId.individual,sample_id=sample_id).count() > 0:
-                    messages.error(request, u"Sample ID '" + sample_id + u"' already added for this individual")
+                    messages.error(request, u"Sample ID '" + sample_id + u"' already added for this individual")                
                     continue
                           
                 sample = Sample()
@@ -412,22 +456,21 @@ class BulkUploadAdmin(admin.ModelAdmin):
                 sample.date_created = datetime.datetime.utcnow().replace(tzinfo=utc)
                 sample.last_updated = datetime.datetime.utcnow().replace(tzinfo=utc)
                 
+                warehouseCursor = connections['warehouse'].cursor()
+                
                 ## if the sanger warehouse is not available then skip this step and warn the user
                 try: 
                     warehouseCursor.execute("SELECT DISTINCT sanger_sample_id, supplier_name, gender FROM samples WHERE name = %s ORDER BY checked_at desc", sample.sample_id)
                     row = warehouseCursor.fetchone()
                     if row is None:
-                        messages.error(request, u"Sample " + sample.sample_id + u" NOT found in warehouse")
+                        messages.error(request, u"Sample " + sample.sample_id + u" NOT found in warehouse")  
                         continue
                     if row[0] is None:
                         messages.error(request, u"Sample " + sample.sample_id + u" NOT found in warehouse")
                         continue  
                     if row[1] != sampleIndId.individual_string:
-                        messages.error(request, u"supplier name " + str(sampleIndId.individual_string) + u" does not match warehouse "  + row[1])
-                        try:
-                            source = Source.objects.get(source_name=centre)
-                        except Source.DoesNotExist:
-                            continue
+                        messages.error(request, u"supplier name " + str(sampleIndId.individual_string) + u" does not match warehouse "  + row[1])                        
+                        
                         ## insert the new individual identifier
                         indId = IndividualIdentifier()
                         indId.individual = sampleIndId.individual
@@ -438,8 +481,7 @@ class BulkUploadAdmin(admin.ModelAdmin):
                         try:
                             indId.save()
                         except IntegrityError:
-                            messages.error(request, u"Individual ID " + row[1] + " is already in the database")
-                            continue
+                            pass
                 except DatabaseError:
                     messages.error(request, u"Can't connect to warehouse database")                    
                                                                                                            
@@ -449,6 +491,26 @@ class BulkUploadAdmin(admin.ModelAdmin):
 #                   messages.error(request, u"Sample " + sample_id + " is already in the database")
                     continue
                 transaction.commit()
+                
+                ## now the sample is inserted check if it was a missing sample
+                if MissingSampleID.objects.filter(sample_id=sample_id).count() > 0:
+                    missingSamples = MissingSampleID.objects.filter(sample_id=sample_id)
+                    
+                    for missingSample in missingSamples:
+                        
+                        studySample = StudySample()
+                        studySample.sample = sample
+                        studySample.study = missingSample.study
+                        studySample.date_created = datetime.datetime.utcnow().replace(tzinfo=utc)
+                        studySample.last_updated = datetime.datetime.utcnow().replace(tzinfo=utc)     
+                
+                        try:
+                            studySample.save()
+                        except IntegrityError:
+                            continue
+                        
+                        missingSample.delete()
+                
             return
         
         elif import_data_type == "add_sample_on_sample":
@@ -458,7 +520,8 @@ class BulkUploadAdmin(admin.ModelAdmin):
             else:
                 records = csv.DictReader(request.FILES["file_to_import"])
                 
-            for line in records:    
+            for line in records:  
+  
                 try:
                     sample_id = line['sample_id']     
                     new_sample_id = line['new_sample_id']                                                       
@@ -466,11 +529,10 @@ class BulkUploadAdmin(admin.ModelAdmin):
                     messages.error(request, u"Input file is missing required column(s) 'sample_id','new_sample_id'")
                     return
                 
-                try:
-                    sample = Sample.objects.get(sample_id=sample_id)
-                except Sample.DoesNotExist:
-#                       messages.error(request, u"Can't find sample in database '" + sample_id + u"'")
-                    continue 
+                if Sample.objects.filter(sample_id=sample_id).count() > 0:                    
+                    sample = Sample.objects.filter(sample_id=sample_id)[0]                
+                else:
+                    continue
                 
                 try:
                     individual = Individual.objects.get(id=sample.individual.id)
@@ -483,12 +545,13 @@ class BulkUploadAdmin(admin.ModelAdmin):
                     messages.error(request, u"sample_id '" + new_sample_id + u"' already added for this individual")
                     continue
                 
-                sample = Sample()
-                sample.individual = individual
-                sample.sample_id = new_sample_id
-                sample.date_created = datetime.datetime.utcnow().replace(tzinfo=utc)
-                sample.last_updated = datetime.datetime.utcnow().replace(tzinfo=utc)
-                sample.save()
+                newSample = Sample()
+                newSample.individual = individual
+                newSample.sample_id = new_sample_id
+                newSample.date_created = datetime.datetime.utcnow().replace(tzinfo=utc)
+                newSample.last_updated = datetime.datetime.utcnow().replace(tzinfo=utc)
+                newSample.save()
+                transaction.commit()
             return
             
         elif import_data_type == "add_phenotype_values":
