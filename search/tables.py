@@ -1,6 +1,6 @@
 import django_tables2 as tables
 from django_tables2.utils import Accessor
-from search.models import Platform, Study, QC, Source, Individual, Sample, Collection
+from search.models import Platform, Study, QC, Source, Individual, Sample, Collection, MissingSampleID
 
 class PlatformTable(tables.Table):        
     class Meta:
@@ -31,6 +31,19 @@ class CollectionTable(tables.Table):
         model  = Collection
         fields = ('collection_name', 'collection_description')         
         attrs  = {'class': 'table table-striped table-bordered'}
+        
+class MissingTable(tables.Table):        
+    study_name = tables.Column()
+    missing_sample_count = tables.LinkColumn('search.views.showMissingStudy', args=[Accessor("study_id")])
+    
+    class Meta:
+        attrs = {'class': 'table table-striped table-bordered'}    
+
+class MissingStudyTable(tables.Table):        
+    sample_id = tables.Column(verbose_name= 'Missing Sample ID')
+    
+    class Meta:
+        attrs  = {'class': 'table table-striped table-bordered'}    
 
 class IndividualTable(tables.Table):        
     class Meta:
