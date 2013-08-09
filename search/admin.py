@@ -209,27 +209,28 @@ class BulkUploadAdmin(admin.ModelAdmin):
                 
                 ## the individual id from another file might be similar but not exactly the same
                 ## check if the sample id and source are the same, if they are then add an individual identifier
-                
-                try:
-                    if Sample.objects.get(sample_id=sample_id):
-                
-                        sample = Sample.objects.get(sample_id=sample_id)
-                        if IndividualIdentifier.objects.get(individual=sample.individual, source__source_name=centre):
-                        
-                            ## add a individual identifier
-                            indId = IndividualIdentifier()
-                            indId.individual = sample.individual
-                            indId.individual_string = centre_id                
-                            indId.source = source
-                            indId.date_created = datetime.datetime.utcnow().replace(tzinfo=utc)
-                            indId.last_updated = datetime.datetime.utcnow().replace(tzinfo=utc)                
-                            try:
-                                indId.save()
-                            except IntegrityError:
-                                messages.error(request, u"centre_id " + centre_id + " is already in the database")
-                            continue
-                except Sample.DoesNotExist:
-                    pass
+#                 
+#                 try:
+#                     if Sample.objects.get(sample_id=sample_id):
+#                 
+#                         sample = Sample.objects.get(sample_id=sample_id)
+#                         
+#                         if IndividualIdentifier.objects.get(individual=sample.individual, source__source_name=centre):
+#                         
+#                             ## add a individual identifier
+#                             indId = IndividualIdentifier()
+#                             indId.individual = sample.individual
+#                             indId.individual_string = centre_id                
+#                             indId.source = source
+#                             indId.date_created = datetime.datetime.utcnow().replace(tzinfo=utc)
+#                             indId.last_updated = datetime.datetime.utcnow().replace(tzinfo=utc)                
+#                             try:
+#                                 indId.save()
+#                             except IntegrityError:
+#                                 messages.error(request, u"centre_id " + centre_id + " is already in the database")
+#                             continue
+#                 except Sample.DoesNotExist:
+#                     pass
                 
                 ## an empty active_id field means that the object refers to itself!
                 ## if the active_id field is not empty, that means it refers to another individual object
@@ -460,7 +461,7 @@ class BulkUploadAdmin(admin.ModelAdmin):
                 
                 ## if the sanger warehouse is not available then skip this step and warn the user
                 try: 
-                    warehouseCursor.execute("SELECT DISTINCT sanger_sample_id, supplier_name, gender FROM samples WHERE name = %s ORDER BY checked_at desc", sample.sample_id)
+                    warehouseCursor.execute("SELECT DISTINCT sanger_sample_id, supplier_name, gender FROM current_samples WHERE name = %s ORDER BY checked_at desc", sample.sample_id)
                     row = warehouseCursor.fetchone()
                     if row is None:
                         messages.error(request, u"Sample " + sample.sample_id + u" NOT found in warehouse")  
