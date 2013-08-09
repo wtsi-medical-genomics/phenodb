@@ -297,9 +297,9 @@ def querybuilder(request):
                                 query_result = PhenodbIdentifier.objects.get(phenodb_id=user_id[0])
                             except PhenodbIdentifier.DoesNotExist:
                                 # see if the id is a sample id
-                                try:
-                                    query_result = Sample.objects.get(sample_id__iexact=user_id[0])
-                                except Sample.DoesNotExist:
+                                if Sample.objects.filter(sample_id__iexact=user_id[0]).count() > 0:
+                                    query_result = Sample.objects.filter(sample_id__iexact=user_id[0])[0]
+                                else:
                                     continue
                                                             
                         elif len(user_id) == 2:
