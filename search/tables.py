@@ -11,7 +11,7 @@ class PlatformTable(tables.Table):
 class StudyTable(tables.Table):        
     class Meta:
         model  = Study
-        fields = ('study_name', 'study_name', 'data_location', 'study_description')         
+        fields = ('study_name', 'platform', 'data_location', 'study_description')         
         attrs  = {'class': 'table table-striped table-bordered'}
         
 class QCTable(tables.Table):        
