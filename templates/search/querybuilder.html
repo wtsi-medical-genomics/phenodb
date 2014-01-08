@@ -26,10 +26,6 @@
 			// enable the "remove" button
 			$('#btnDel').removeAttr("disabled");
 
-			// Maximum number of forms
-			if (newNum == 5)
-				$('#btnAdd').attr('disabled', 'disabled');
-
 			$("[id^=from]").change(function() {
 				var idstr = $(this).attr("id")
 				var idarray = idstr.split("_")
@@ -43,8 +39,7 @@
 					$("#querystr_" + idnum).prop('value', '');
 					$("#querystr_" + idnum).prop('disabled', true);
 				} else {
-
-					if ($("#from_" + idnum).val() == 'source' | $("#from_" + idnum).val() == 'sstudy' | $("#from_" + idnum).val() == 'platform') {
+					if ($("#from_" + idnum).val() == 'source' | $("#from_" + idnum).val() == 'study' | $("#from_" + idnum).val() == 'platform') {
 						$("#is_" + idnum).prop('value', '');
 						$("#is_" + idnum).attr('disabled', true);
 						$("#querystr_" + idnum).prop('value', '');
@@ -73,11 +68,6 @@
 	
 				if ($(this).val() == 'message') {
 					$("#is_" + idnum).attr('disabled', true);
-				} else if ($("#from_" + idnum).val() == 'source' | $("#from_" + idnum).val() == 'study' | $("#from_" + idnum).val() == 'platform') {
-					$("#is_" + idnum).prop('value', '');
-					$("#is_" + idnum).attr('disabled', true);
-					$("#querystr_" + idnum).prop('value', '');
-					$("#querystr_" + idnum).prop('disabled', true);
 				} else {
 					$("#is_" + idnum).attr('disabled', false);
 					var url = "/search/querybuilder/" + $("#from_" + idnum).val() + "/" + $(this).val() + "/all_search_options";
@@ -144,7 +134,7 @@
 				$("#where_" + idnum).attr('disabled', false);
 				var url = "/search/querybuilder/" + $(this).val() + "/all_json_models";
 				var from = $(this).val();
-				if ($("#from_" + idnum).val() == 'source' | $("#from_" + idnum).val() == 'sstudy' | $("#from_" + idnum).val() == 'platform') {
+				if ($("#from_" + idnum).val() == 'source' | $("#from_" + idnum).val() == 'study' | $("#from_" + idnum).val() == 'platform') {
 					$("#is_" + idnum).prop('value', '');
 					$("#is_" + idnum).attr('disabled', true);
 					$("#querystr_" + idnum).prop('value', '');
@@ -169,11 +159,6 @@
 
 			if ($(this).val() == 'message') {
 				$("#is_" + idnum).attr('disabled', true);
-			} else if ($("#from_" + idnum).val() == 'source' | $("#from_" + idnum).val() == 'study' | $("#from_" + idnum).val() == 'platform') {
-				$("#is_" + idnum).prop('value', '');
-				$("#is_" + idnum).attr('disabled', true);
-				$("#querystr_" + idnum).prop('value', '');
-				$("#querystr_" + idnum).prop('disabled', true);
 			} else {
 				$("#is_" + idnum).attr('disabled', false);
 				var url = "/search/querybuilder/" + $("#from_" + idnum).val() + "/" + $(this).val() + "/all_search_options";
@@ -194,7 +179,7 @@
 			}
 		});
 		
-		// turn the query string box off is a null query is selected
+		// turn the query string box off if a boolean query is selected
 		$("[id^=is]").change(function() {
 			// get the id number of the menu that changed so that we change the correct search filter
 			var idstr = $(this).attr("id")
@@ -208,7 +193,8 @@
 				$("#querystr_" + idnum).prop('disabled', false);
 			}
 		});
-
+		
+		// active the file select button and text area if the user select to input their own ids
 		$('input[name=searchIn]').change(function() {
 			if (this.value == "userlist") {
 				$('#individual_list, #individual_file').prop('disabled', false);
@@ -318,6 +304,19 @@
 							<label class="checkbox">
 								<input type="checkbox" name="output" value="phenotype:{{phenotype.id}}">
 								{{phenotype.phenotype_name}}</label>
+							<br/>
+							{% endfor %}
+						</div>
+					</div>
+					<div class="accordion-heading">
+						<a class="accordion-toggle" data-toggle="collapse" data-target="#collapseFour" href="#"> Study IDs </a>
+					</div>
+					<div id="collapseFour" class="accordion-body collapse out">
+						<div class="accordion-inner">
+							{% for study in studies %}
+							<label class="checkbox">
+								<input type="checkbox" name="output" value="study:{{study.id}}">
+								{{study.study_name}}</label>
 							<br/>
 							{% endfor %}
 						</div>
