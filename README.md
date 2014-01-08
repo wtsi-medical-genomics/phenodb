@@ -8,4 +8,3 @@ Testing
 
 Populating the database:
 
-Bugs - Issues - Feature suggestions:
