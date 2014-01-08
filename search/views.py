@@ -534,10 +534,7 @@ def get_output_data(page_results, output_columns):
             if column == 'IndividualID':                
                 ind_strings = IndividualIdentifier.objects.filter(individual_id = ind_id).values('individual_string')                            
                 ## if there are more than 1 id then join the strings
-                identifier_string = ""
-                for i in ind_strings:                    
-                    identifier_string = ",".join((i['individual_string'], identifier_string))
-                row_values.append(identifier_string.strip())
+                identifier_string = ", ".join(ind_strings)
             elif column == 'PhenodbID':          
                 row_values.append(PhenodbIdentifier.objects.get(individual_id = ind_id).phenodb_id)                                
             elif column == 'Source':
