@@ -533,41 +533,43 @@ def get_output_data(page_results, output_columns):
         for column in output_columns:
             if column == 'IndividualID':                
                 ind_strings = IndividualIdentifier.objects.filter(individual_id = ind_id).values('individual_string')                            
-                ## if there are more than 1 id then join the strings
-                identifier_string = ""
-                for i in ind_strings:                    
-                    identifier_string = ",".join((i['individual_string'], identifier_string))
-                row_values.append(identifier_string.strip())
+                identifier_string = ", ".join(v['individual_string'] for v in ind_strings)
+                
+                row_values.append(identifier_string)
+                
             elif column == 'PhenodbID':          
-                row_values.append(PhenodbIdentifier.objects.get(individual_id = ind_id).phenodb_id)                                
+                row_values.append(PhenodbIdentifier.objects.get(individual_id = ind_id).phenodb_id)
+                                                
             elif column == 'Source':
                 ind_objects = IndividualIdentifier.objects.filter(individual_id = ind_id)
-                source_string = ""
-                for i in ind_objects:
-                    source_string = ",".join((i.source.source_name, source_string))
-                row_values.append(source_string.strip())
+                source_string = ", ".join(i.source.source_name for i in ind_objects)
+                
+                row_values.append(source_string)
+                
             elif column == 'SampleIDs':
                 sample_ids = Sample.objects.filter(individual_id = ind_id).distinct().values('sample_id')
-                sample_string = ""
-                for s in sample_ids:
-                    sample_string = ",".join((s['sample_id'], sample_string))    
-                row_values.append(sample_string.strip())                
+                sample_string = ", ".join(s['sample_id'] for s in sample_ids)
+                
+                row_values.append(study_string)
+                                
             elif column == 'Studies':
                 samples = Sample.objects.filter(individual_id = ind_id)                
                 study_string = ""
                 for s in samples:
                     study_samples = StudySample.objects.filter(sample_id = s)
-                    for ss in study_samples:
-                        study_string = ",".join((ss.study.study_name, study_string))    
-                row_values.append(study_string.strip())
+                    study_string = ", ".join(ss.study.study_name for ss in study_samples)    
+                
+                row_values.append(study_string)
+                
             elif column == 'Platforms':
                 samples = Sample.objects.filter(individual_id = ind_id)
                 platform_string = ""
                 for s in samples:
                     study_samples = StudySample.objects.filter(sample_id = s)
-                    for ss in study_samples:
-                        platform_string = ",".join((ss.study.platform.platform_name, platform_string))    
-                row_values.append(platform_string.strip())
+                    platform_string = ", ".join(ss.study.platform.platform_name for ss in study_samples)
+                        
+                row_values.append(platform_string)
+                
             elif str(column).startswith("phenotype"):               
                 phenotype_id = column.split(":")[1] 
                 phenotype = Phenotype.objects.get(id=phenotype_id)            
