@@ -33,7 +33,7 @@ class AdminTest(TestCase):
         self.client.post('/admin/search/bulkupload/add/', {'import_data_type': 'samples', 'file_to_import':samplefh, 'file_delimiter': 'comma'})
         samplefh.close()
         # load individuals again
-        indfh = open('data/test/test_individual_input2.csv', 'r')
+        indfh = open('data/test/test_individual_input.csv', 'r')
         self.client.post('/admin/search/bulkupload/add/', {'import_data_type': 'individuals', 'file_to_import':indfh, 'file_delimiter': 'comma'})
         indfh.close()
         # load wtccc1 sample study
@@ -390,34 +390,58 @@ class QueryTest(TestCase):
         self.assertEqual(response.context['count'], 3)
   
 #        single source
-        response = self.client.post('/search/querybuilder/', {'from': 'source', 'where': oxford.pk, 'searchIn': 'all', 'output': 'PhenodbID', 'andor': 'and'})
+        response = self.client.post('/search/querybuilder/', {'from': 'source', 'where': oxford.pk, 'is': 'true', 'searchIn': 'all', 'output': 'PhenodbID', 'andor': 'and'})
         self.assertEqual(response.context['count'], 8)
 #        multiple source and
-        response = self.client.post('/search/querybuilder/', {'from': ['source','source'], 'where': [oxford.pk, cambridge.pk], 'searchIn': 'all', 'output': ['PhenodbID'], 'andor': ['and','and']})
+        response = self.client.post('/search/querybuilder/', {'from': ['source','source'], 'where': [oxford.pk, cambridge.pk], 'is': ['true','true'], 'searchIn': 'all', 'output': ['PhenodbID'], 'andor': ['and','and']})
         self.assertEqual(response.context['message'], "Sorry your query didn't return any results, please try another query.")
 #        multiple source or
-        response = self.client.post('/search/querybuilder/', {'from': ['source','source'], 'where': [oxford.pk, cambridge.pk], 'searchIn': 'all', 'output': ['PhenodbID'], 'andor': ['or','or']})
+        response = self.client.post('/search/querybuilder/', {'from': ['source','source'], 'where': [oxford.pk, cambridge.pk], 'is': ['true','true'], 'searchIn': 'all', 'output': ['PhenodbID'], 'andor': ['or','or']})
         self.assertEqual(response.context['count'], 12)
   
 #        single study
-        response = self.client.post('/search/querybuilder/', {'from': ['study'], 'where': [wtccc1.pk], 'searchIn': 'all', 'output': ['PhenodbID'], 'andor': ['and']})
+        response = self.client.post('/search/querybuilder/', {'from': ['study'], 'where': [wtccc1.pk], 'is': ['true'], 'searchIn': 'all', 'output': ['PhenodbID'], 'andor': ['and']})
         self.assertEqual(response.context['count'], 8)
 #        multiple studies and
-        response = self.client.post('/search/querybuilder/', {'from': ['study','study'], 'where': [wtccc1.pk, wtccc2.pk], 'searchIn': 'all', 'output': ['PhenodbID'], 'andor': ['and','and']})
+        response = self.client.post('/search/querybuilder/', {'from': ['study','study'], 'where': [wtccc1.pk, wtccc2.pk], 'is': ['true','true'], 'searchIn': 'all', 'output': ['PhenodbID'], 'andor': ['and','and']})
         self.assertEqual(response.context['message'], "Sorry your query didn't return any results, please try another query.")
 #        multiple studies or 
-        response = self.client.post('/search/querybuilder/', {'from': ['study','study'], 'where': [wtccc1.pk, wtccc2.pk], 'searchIn': 'all', 'output': ['PhenodbID'], 'andor': ['or','or']})
+        response = self.client.post('/search/querybuilder/', {'from': ['study','study'], 'where': [wtccc1.pk, wtccc2.pk], 'is': ['true','true'], 'searchIn': 'all', 'output': ['PhenodbID'], 'andor': ['or','or']})
         self.assertEqual(response.context['count'], 12)
+#         samples not in a study
+        response = self.client.post('/search/querybuilder/', {'from': ['study'], 'where': [wtccc1.pk], 'is': ['false'], 'searchIn': 'all', 'output': ['PhenodbID'], 'andor': ['or']})
+        self.assertEqual(response.context['count'], 4)
+#        multiple studies not + and
+        response = self.client.post('/search/querybuilder/', {'from': ['study','study'], 'where': [wtccc1.pk, wtccc2.pk], 'is': ['false','false'], 'searchIn': 'all', 'output': ['PhenodbID'], 'andor': ['and','and']})
+        self.assertEqual(response.context['message'], "Sorry your query didn't return any results, please try another query.")
+#        multiple studies not + or 
+        response = self.client.post('/search/querybuilder/', {'from': ['study','study'], 'where': [wtccc1.pk, wtccc2.pk], 'is': ['false','false'], 'searchIn': 'all', 'output': ['PhenodbID'], 'andor': ['or','or']})
+        self.assertEqual(response.context['count'], 12)
+#         in one study and not in another
+        response = self.client.post('/search/querybuilder/', {'from': ['study','study'], 'where': [wtccc1.pk, wtccc2.pk], 'is': ['true','false'], 'searchIn': 'all', 'output': ['PhenodbID'], 'andor': ['and','or']})
+        self.assertEqual(response.context['count'], 8)
           
 #        single platform
-        response = self.client.post('/search/querybuilder/', {'from': ['platform'], 'where': [affy6.pk], 'searchIn': 'all', 'output': ['PhenodbID'], 'andor': ['and']})
+        response = self.client.post('/search/querybuilder/', {'from': ['platform'], 'where': [affy6.pk], 'is': ['true'], 'searchIn': 'all', 'output': ['PhenodbID'], 'andor': ['and']})
         self.assertEqual(response.context['count'], 8)
 #        multiple platforms and
-        response = self.client.post('/search/querybuilder/', {'from': ['platform','platform'], 'where': [affy6.pk, affy500k.pk], 'searchIn': 'all', 'output': ['PhenodbID'], 'andor': ['and','and']})
+        response = self.client.post('/search/querybuilder/', {'from': ['platform','platform'], 'where': [affy6.pk, affy500k.pk], 'is': ['true','true'], 'searchIn': 'all', 'output': ['PhenodbID'], 'andor': ['and','and']})
         self.assertEqual(response.context['message'], "Sorry your query didn't return any results, please try another query.")
 #        multiple platforms or 
-        response = self.client.post('/search/querybuilder/', {'from': ['platform','platform'], 'where': [affy6.pk, affy500k.pk], 'searchIn': 'all', 'output': ['PhenodbID'], 'andor': ['or','or']})
+        response = self.client.post('/search/querybuilder/', {'from': ['platform','platform'], 'where': [affy6.pk, affy500k.pk], 'is': ['true','true'], 'searchIn': 'all', 'output': ['PhenodbID'], 'andor': ['or','or']})
         self.assertEqual(response.context['count'], 12)
+#         samples not run on a platform
+        response = self.client.post('/search/querybuilder/', {'from': ['platform'], 'where': [affy6.pk], 'is': ['false'], 'searchIn': 'all', 'output': ['PhenodbID'], 'andor': ['and']})
+        self.assertEqual(response.context['count'], 4)
+#        multiple platforms not + and
+        response = self.client.post('/search/querybuilder/', {'from': ['platform','platform'], 'where': [affy6.pk, affy500k.pk], 'is': ['false','false'], 'searchIn': 'all', 'output': ['PhenodbID'], 'andor': ['and','and']})
+        self.assertEqual(response.context['message'], "Sorry your query didn't return any results, please try another query.")
+#        multiple platforms not + or 
+        response = self.client.post('/search/querybuilder/', {'from': ['platform','platform'], 'where': [affy6.pk, affy500k.pk], 'is': ['false','false'], 'searchIn': 'all', 'output': ['PhenodbID'], 'andor': ['or','or']})
+        self.assertEqual(response.context['count'], 12)        
+#         run on one platform and not another
+        response = self.client.post('/search/querybuilder/', {'from': ['platform','platform'], 'where': [affy6.pk, affy500k.pk], 'is': ['true','false'], 'searchIn': 'all', 'output': ['PhenodbID'], 'andor': ['and','or']})
+        self.assertEqual(response.context['count'], 8)
   
 #        search using sample ids only
         sampleIDsfh = open('data/test/test_search_sample_ids.txt', 'r')
