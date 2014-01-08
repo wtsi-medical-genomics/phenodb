@@ -126,7 +126,7 @@ class SampleFeatureType(models.Model):
     sample_feature_type = models.CharField(max_length=100, unique=True)
     
     def __unicode__(self):
-        return self.phenotype_type
+        return self.sample_feature_type
 
 class SampleFeature(models.Model):
     sample_feature_name = models.CharField(max_length=100, unique=True)
@@ -134,7 +134,7 @@ class SampleFeature(models.Model):
     sample_feature_description = models.TextField()
 
     def __unicode__(self):
-        return self.phenotype_name    
+        return self.sample_feature_name    
     
 class AffectionStatusSampleFeatureValue(models.Model):
     sample_feature = models.ForeignKey(SampleFeature)
