@@ -550,7 +550,7 @@ def get_output_data(page_results, output_columns):
                 sample_ids = Sample.objects.filter(individual_id = ind_id).distinct().values('sample_id')
                 sample_string = ", ".join(s['sample_id'] for s in sample_ids)
                 
-                row_values.append(study_string)
+                row_values.append(sample_string)
                                 
             elif column == 'Studies':
                 samples = Sample.objects.filter(individual_id = ind_id)                
