@@ -6,6 +6,7 @@ from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 import csv
 import json
 import StringIO
+import time
 
 ## Fudge required for generating plots in production because writing to sys.stdout is by default restricted in versions of mod_wsgi
 ## This restriction can be disabled by mapping sys.stdout to sys.stderr at global scope within in the WSGI application script file.
@@ -174,6 +175,7 @@ def getPhenotypePlotData(request, phenotype_id):
     return HttpResponse(myFakeFile.getvalue(), content_type='text/tab-separated-values')
 
 def all_json_models(request, menuid):
+    
     if menuid == 'phenotype':
         menuitems = Phenotype.objects.all()
     elif menuid == 'platform':
@@ -198,7 +200,9 @@ def all_search_options(request, menuid, menuval):
             menuitems = [{"value": "eq", "text": "Equals" },{"value": "contains", "text": "Contains" },{"value": "starts_with", "text": "Starts with" },{"value": "ends_with", "text": "Ends with" },{"value": "isnull", "text": "Is NULL"},{"value": "notnull", "text": "Is not NULL"}]        
         elif phenotype.phenotype_type.phenotype_type == 'Quantitative':        
             menuitems = [{"value": "eq", "text": "==" },{"value": "gt", "text": ">" },{"value": "gte", "text": ">=" },{"value": "lt", "text": "<" },{"value": "lte", "text": "<=" },{"value": "isnull", "text": "Is NULL"},{"value": "notnull", "text": "Is not NULL"}]
-    
+    else:
+        menuitems = [{"value": "true", "text": "True" },{"value": "false", "text": "False"}]
+        
     return HttpResponse(json.dumps(menuitems), mimetype="application/javascript")
 
 def generate_html_table(output, query_results):
@@ -210,6 +214,10 @@ def generate_html_table(output, query_results):
             phenotype_id = column.split(":")[1] 
             phenotype = Phenotype.objects.get(id=phenotype_id)            
             table_html = "".join((table_html, "<th>"+ phenotype.phenotype_name +"</th>"))
+        elif str(column).startswith("study"):
+            study_id = column.split(":")[1] 
+            study = Study.objects.get(id=study_id)            
+            table_html = "".join((table_html, "<th>"+ study.study_name +"</th>"))
         else:
             table_html = "".join((table_html, "<th>"+ column +"</th>"))
     table_html = "".join((table_html, "</tr>"))
@@ -286,21 +294,30 @@ def querybuilder(request):
                     else:
                         message = "Sorry your file '" + indFile.name + "' is too large to read into memory."
                         return render(request, 'search/querybuilder.html', {'phenotypes':Phenotype.objects.all(),'message':message})                                           
-    
+                ## get user input to say if ids are phenodbids, sample or supplier
                 if len(user_ids) > 0:                    
                     # array of tuples
                     db_ids = []                
                     for user_id in user_ids:
-                        
+                        start = time.time()
                         if len(user_id) == 1:
                             try:
-                                query_result = PhenodbIdentifier.objects.get(phenodb_id=user_id[0])
-                            except PhenodbIdentifier.DoesNotExist:
+                                query_result = Sample.objects.filter(sample_id__iexact=user_id[0])[0]
+                                
+                            except IndexError:
                                 # see if the id is a sample id
-                                if Sample.objects.filter(sample_id__iexact=user_id[0]).count() > 0:
-                                    query_result = Sample.objects.filter(sample_id__iexact=user_id[0])[0]
+                                if PhenodbIdentifier.objects.filter(phenodb_id=user_id[0]).count() > 0:
+                                    query_result = PhenodbIdentifier.objects.get(phenodb_id=user_id[0])
                                 else:
                                     continue
+#                             try:
+#                                 query_result = PhenodbIdentifier.objects.get(phenodb_id=user_id[0])
+#                             except PhenodbIdentifier.DoesNotExist:
+#                                 # see if the id is a sample id
+#                                 if Sample.objects.filter(sample_id__iexact=user_id[0]).count() > 0:
+#                                     query_result = Sample.objects.filter(sample_id__iexact=user_id[0])[0]
+#                                 else:
+#                                     continue
                                                             
                         elif len(user_id) == 2:
                             try:
@@ -311,6 +328,7 @@ def querybuilder(request):
                         ## the individuals need to be in tuples to match the queryset results 
                         individual_tuple = query_result.individual_id,      
                         db_ids.append(individual_tuple)
+                        print 'id search',time.time() - start
                     
                     if len(db_ids) > 0:
                         
@@ -351,7 +369,7 @@ def querybuilder(request):
                     return render(request, 'search/querybuilder.html', {'phenotypes':Phenotype.objects.all(),'message':message})
     else:
         # pass all the phenotypes to the form to create the output options                 
-        return render(request, 'search/querybuilder.html', {'phenotypes':Phenotype.objects.all()})
+        return render(request, 'search/querybuilder.html', {'phenotypes':Phenotype.objects.all(), 'studies':Study.objects.all})
         
 def querypage(request, page, results_per_page):
     
@@ -452,11 +470,22 @@ def query_db(table, where, where_is, querystr, last_query, andor):
             elif where_is == 'notnull':
                 result_set = QuantitiatvePhenotypeValue.objects.filter(phenotype__exact=phenotype.id, phenotype_value__isnull=False).values_list('individual_id')
     elif table == 'source':
-        result_set = IndividualIdentifier.objects.filter(source=where).values_list('individual_id')
+        if where_is == 'true':
+            result_set = IndividualIdentifier.objects.filter(source=where).values_list('individual_id')
+        else:
+            result_set = IndividualIdentifier.objects.exclude(source=where).values_list('individual_id')
+        
     elif table == 'study':
-        result_set = Sample.objects.filter(studysample__study=where).values_list('individual_id')
+        if where_is == 'true':
+            result_set = Sample.objects.filter(studysample__study=where).values_list('individual_id')
+        else:
+            print 'here'
+            result_set = Sample.objects.exclude(studysample__study=where).values_list('individual_id')
     elif table == 'platform':
-        result_set = Sample.objects.filter(studysample__study__platform=where).values_list('individual_id')
+        if where_is == 'true':
+            result_set = Sample.objects.filter(studysample__study__platform=where).values_list('individual_id')
+        else:
+            result_set = Sample.objects.exclude(studysample__study__platform=where).values_list('individual_id')
 
     if last_query is not None:
         if result_set.count() > 0:            
@@ -498,6 +527,7 @@ def get_output_data(page_results, output_columns):
     ## get the result columns that user wants
     parsed_results = []
     for ind_tuple in page_results:
+        start = time.time()
         ind_id = ind_tuple['identifier']
         row_values = []
         for column in output_columns:
@@ -562,9 +592,31 @@ def get_output_data(page_results, output_columns):
                         value = "-"            
                 
                 row_values.append(value)
-        
+            elif str(column).startswith("study:"):
+                study_id = column.split(":")[1]
+                try:
+                    ## check if there is a studysample for this study / sample
+                    study_sample = StudySample.objects.get(sample__individual__id = ind_id, study=study_id)
+                    study_sample_id = study_sample.sample.sample_id
+                except StudySample.DoesNotExist:
+                    study_sample_id = ""
+                except StudySample.MultipleObjectsReturned:
+                    ## what if there is more than one entry for the individual?
+                    ## such as where we have two sample names that both belong to a study?
+                    ## not sure what to do here
+                    continue
+                    
+#                 if StudySample.objects.filter(sample__individual__id = ind_id, study=study_id).count() == 1:
+#                     study_sample = StudySample.objects.get(sample__individual__id = ind_id, study=study_id)
+#                     study_sample_id = study_sample.sample.sample_id  
+#                 for sample in samples: 
+#                     if StudySample.objects.filter(sample=sample, study=study).count() == 1:
+#                         study_sample_id = sample.sample_id
+
+                row_values.append(study_sample_id)
+                           
         parsed_results.append(row_values)
-    
+        print 'results',time.time() - start
     return parsed_results
     
 def perform_queries(request, tables, wheres, where_iss, querystrs, andors):
@@ -578,15 +630,15 @@ def perform_queries(request, tables, wheres, where_iss, querystrs, andors):
     andor = andors.pop()
     
     if table == 'source' or table == 'study' or table == 'platform':
-        where_is = ''
         querystr = ''
+        where_is = where_iss.pop()
         
         if table == 'source':
-            query_summary = ["FROM source " + Source.objects.get(id=where).source_name]
+            query_summary = ["FROM source " + Source.objects.get(id=where).source_name  + " " + where_is]
         elif table == 'study':
-            query_summary = ["FROM study " + Study.objects.get(id=where).study_name]
+            query_summary = ["FROM study " + Study.objects.get(id=where).study_name  + " " + where_is]
         elif table == 'platform':
-            query_summary = ["FROM platform " + Platform.objects.get(id=where).platform_name]
+            query_summary = ["FROM platform " + Platform.objects.get(id=where).platform_name  + " " + where_is]
         
     elif table == 'phenotype':
         where_is = where_iss.pop()
@@ -609,16 +661,16 @@ def perform_queries(request, tables, wheres, where_iss, querystrs, andors):
         table = tables.pop()
         where = wheres.pop()
         andor = andors.pop()
-        if table == 'source' or table == 'study' or table == 'platform':
-            where_is = ''
+        if table == 'source' or table == 'study' or table == 'platform':            
             querystr = ''
+            where_is = where_iss.pop()
         
             if table == 'source':
-                query_string = "FROM source " + Source.objects.get(id=where).source_name
+                query_string = "FROM source " + Source.objects.get(id=where).source_name   + " " + where_is
             elif table == 'study':
-                query_string = "FROM study " + Study.objects.get(id=where).study_name
+                query_string = "FROM study " + Study.objects.get(id=where).study_name  + " " + where_is
             elif table == 'platform':
-                query_string = "FROM platform " + Platform.objects.get(id=where).platform_name
+                query_string = "FROM platform " + Platform.objects.get(id=where).platform_name  + " " + where_is
         
         elif table == 'phenotype':
             where_is = where_iss.pop()                                
