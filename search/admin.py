@@ -733,3 +733,6 @@ admin.site.register(Source, SourceAdmin)
 admin.site.register(QC, QCAdmin)
 admin.site.register(BulkUpload, BulkUploadAdmin)
 admin.site.register(Collection)
+admin.site.register(SampleFeatureType)
+admin.site.register(SampleFeature)
+
