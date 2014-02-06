@@ -328,7 +328,7 @@ def querybuilder(request):
                         ## the individuals need to be in tuples to match the queryset results 
                         individual_tuple = query_result.individual_id,      
                         db_ids.append(individual_tuple)
-                        print 'id search',time.time() - start
+                        #print 'id search',time.time() - start
                     
                     if len(db_ids) > 0:
                         
@@ -376,7 +376,7 @@ def querypage(request, page, results_per_page):
     tables = request.session.get('tables')
     wheres = request.session.get('wheres')
     where_iss = request.session.get('where_iss')
-    querystrs = request.session.get('search_in')
+    querystrs = request.session.get('querystrs')
     output = request.session.get('output')
     search_in = request.session.get('search_in')
     andors    = request.session.get('andors')
@@ -479,7 +479,6 @@ def query_db(table, where, where_is, querystr, last_query, andor):
         if where_is == 'true':
             result_set = Sample.objects.filter(studysample__study=where).values_list('individual_id')
         else:
-            print 'here'
             result_set = Sample.objects.exclude(studysample__study=where).values_list('individual_id')
     elif table == 'platform':
         if where_is == 'true':
@@ -618,7 +617,7 @@ def get_output_data(page_results, output_columns):
                 row_values.append(study_sample_id)
                            
         parsed_results.append(row_values)
-        print 'results',time.time() - start
+        #print 'results',time.time() - start
     return parsed_results
     
 def perform_queries(request, tables, wheres, where_iss, querystrs, andors):
