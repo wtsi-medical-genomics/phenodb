@@ -17,12 +17,15 @@ class BulkUploadForm(forms.ModelForm):
         ('phenotypes','Phenotypes'),
         ('sources','Sources'),
         ('individuals','Individuals'),        
+        ('individual_ids', 'Add new Individual IDs to an Individual'),
         ('samples','Samples'),                
         ('study_samples', 'Study Samples'),
         ('sample_qc', 'Sample QC'),
         ('add_sample_on_sample', 'Add New SampleID to existing Sample on SampleID'),
         ('add_phenotype_values', 'Add phenotype values to existing individuals')
-        #('check_samples_in_warehouse', 'Check Samples in Sanger Warehouse'),
+        
+#         ('add_sample_feature_values', 'Add sample feature values')
+#         ('check_samples_in_warehouse', 'Check Samples in Sanger Warehouse'),
     )
     import_data_type = forms.ChoiceField(import_options, help_text = "Select the type of data you wish to import")
     
@@ -38,6 +41,9 @@ class BulkUploadForm(forms.ModelForm):
     
     <b>Individuals</b><br>
     &nbsp&nbsp&ltcentre&gt &ltcentre_id&gt [collection] [any Phenotype name already entered in the Phenotype table]...<br>
+    
+    <b>Add new Individual ID to an Individual</b><br>
+    &nbsp&nbsp&ltcentre&gt &ltcentre_id&gt &ltnew_centre_id&gt <br>
     
     <b>Samples</b><br>
     &nbsp&nbsp&ltsample_id&gt &ltcentre&gt &ltcentre_id&gt <br>
@@ -191,7 +197,7 @@ class BulkUploadAdmin(admin.ModelAdmin):
                 try:
                     centre = line['centre']
                     centre_id = line['centre_id']
-                    sample_id = line['sample_id']                    
+#                     sample_id = line['sample_id']                    
                 except KeyError:
                     messages.error(request, u"Input file is missing required column(s) 'centre centre_id'")
                     return     
@@ -415,8 +421,53 @@ class BulkUploadAdmin(admin.ModelAdmin):
                 messages.success(request, u"Source " + line['centre'] + u" was added to PhenoDB")                
             return
         
-        elif import_data_type == "samples":
+        elif import_data_type == 'individual_ids':
             
+            if file_delimiter == "tab":
+                records = csv.DictReader(request.FILES["file_to_import"], delimiter='\t')
+            else:
+                records = csv.DictReader(request.FILES["file_to_import"])
+            
+            for line in records:
+                
+                try:
+                    centre = line['centre']
+                    centre_id = line['centre_id']
+                    new_centre_id = line['new_centre_id']                    
+                except KeyError:
+                    messages.error(request, u"Input file is missing required column(s) 'centre centre_id new_centre_id'")
+                    return 
+            
+                try:
+                    source = Source.objects.get(source_name=centre)
+                except Source.DoesNotExist:
+                    messages.error(request, u"Can't find source in database '" + centre + u"'")
+                    continue
+            
+                ## check if the id has already been entered for the given source
+                try:
+                    indId = IndividualIdentifier.objects.get(individual_string=centre_id,source_id=source.id)
+                except IndividualIdentifier.DoesNotExist:
+                    messages.error(request, u"Individual " + centre_id + u" NOT found in phenodb")
+                    continue
+                
+                ## insert the new individual identifier
+                newIndId = IndividualIdentifier()
+                newIndId.individual = indId.individual
+                newIndId.individual_string = new_centre_id
+                newIndId.source = source
+                newIndId.date_created = datetime.datetime.utcnow().replace(tzinfo=utc)
+                newIndId.last_updated = datetime.datetime.utcnow().replace(tzinfo=utc)
+                try:
+                    newIndId.save()
+                except IntegrityError:
+                    print 'not saved'
+                    pass
+                transaction.commit()
+            
+            return
+            
+        elif import_data_type == "samples":
             
             if file_delimiter == "tab":
                 records = csv.DictReader(request.FILES["file_to_import"], delimiter='\t')
@@ -678,6 +729,32 @@ class BulkUploadAdmin(admin.ModelAdmin):
                             messages.error(request, u"failed to update " + pheno.phenotype_name + " for " + sampleIndId.individual_string)
                     else:
                         messages.error(request, u"unrecognised phenotype type " + pheno.phenotype_type.phenotype_type)
+            return
+        
+        elif import_data_type == "add_sample_feature_values":
+            
+            sample_feature = SampleFeature.objects.get(id=request.POST["sample_feature_id"])
+            
+            if file_delimiter == "tab":
+                records = csv.DictReader(request.FILES["file_to_import"], delimiter='\t')
+            else:
+                records = csv.DictReader(request.FILES["file_to_import"])
+            
+            for line in records:   
+                
+                ## check that the input data columns we expect are there
+                try:
+                    sample_id = line['sample_id']
+                    sample_feature_value = line['sample_feature_value']                    
+                except KeyError:
+                    messages.error(request, u"Input file is missing required column(s) 'sample_id sample_feature_value'")
+                    return
+                
+                ## find the sample and give an error if it can't be found
+                
+                ## insert the sample feature value
+                
+            
             return
         
         elif import_data_type == "check_samples_in_warehouse":
