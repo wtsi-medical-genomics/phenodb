@@ -133,6 +133,104 @@ class BulkUploadAdmin(admin.ModelAdmin):
             messages.error(request, str(insert_total) + " of " + str(sample_total) + u" samples successfully inserted into the database")
             return
         
+        elif import_data_type == 'remove_ind_dups':
+            
+            # take in a list of individual IDs and Centre
+            
+            if file_delimiter == "tab":
+                records = csv.DictReader(request.FILES["file_to_import"], delimiter='\t')
+            else:
+                records = csv.DictReader(request.FILES["file_to_import"])
+            
+            for line in records:
+                
+                print line
+                
+                ## required columns: Centre,Centre ID                
+                try:
+                    working_id = line['working_id']
+                    remove_id = line['remove_id'] 
+                    centre = line['centre']                     
+                except KeyError:
+                    messages.error(request, u"Input file is missing required column(s) 'working_id remove_id centre'")
+                    return
+                
+                
+                print working_id + " working id"
+                print remove_id + " remove id"
+                print centre + " centre"     
+                
+                try:
+                    source = Source.objects.get(source_name=centre)
+                except Source.DoesNotExist:
+                    messages.error(request, u"Can't find source in database '" + centre + u"'")
+                    continue
+                
+                ## check that the working ID exists
+                if IndividualIdentifier.objects.filter(individual_string=working_id,source_id=source.id).count() < 1:
+                    messages.error(request, u"Individual '" + working_id + u"' does not exist in the database")
+                    continue
+                 
+                ## check that the remove ID exists
+                if IndividualIdentifier.objects.filter(individual_string=remove_id,source_id=source.id).count() < 1:
+                    messages.error(request, u"Individual '" + remove_id + u"' does not exist in the database")
+                    continue
+                
+                ## get the database indivdual ID of the working ID
+                indIDs = IndividualIdentifier.objects.filter(individual_string=working_id,source_id=source.id).values('individual_id')
+                
+                print indIDs
+                
+                
+                
+                ## get the first individual ID for the 
+                
+                 
+                
+                
+                
+                
+                ## get all the individual identifier IDs for the remove id
+#                 inds = IndividualIdentifier.objects.filter(individual_string=remove_id,source_id=source.id)
+#                 
+#                 removeIndId = inds[0].
+#                 
+#                 for ind in inds:
+                    
+                    
+                    
+                    
+                
+                
+                
+                ## get all the sample IDs for the remove ID
+                
+                
+                ## start a transaction
+                
+                ## add all the individual indentifier ids to the working id
+                
+                ## add all the remove sample ids to the working id
+                
+                ## remove the remove indiviudal and phenodb id
+                
+                
+                
+                
+                
+                
+                ## remove the remove id
+                 
+                 
+                 
+            return
+            
+            
+            
+            
+            
+            
+        
         elif import_data_type == "sample_qc":
             
             study_id = request.POST["study_id"]
