@@ -18,6 +18,7 @@ class BulkUploadForm(forms.ModelForm):
         ('sources','Sources'),
         ('individuals','Individuals'),        
         ('individual_ids', 'Add new Individual IDs to an Individual'),
+        ('remove_ind_dups','Remove Duplicate Individuals'),
         ('samples','Samples'),                
         ('study_samples', 'Study Samples'),
         ('sample_qc', 'Sample QC'),
@@ -44,6 +45,14 @@ class BulkUploadForm(forms.ModelForm):
     
     <b>Add new Individual ID to an Individual</b><br>
     &nbsp&nbsp&ltcentre&gt &ltcentre_id&gt &ltnew_centre_id&gt <br>
+    
+    <b>Remove Duplicate Individuals</b><br>
+    &nbsp&nbsp&ltcentre&gt &ltworking_id&gt &ltremove_id&gt <br>
+    Given a working ID, Remove ID and Centre name this function will:<br>
+    1. Search that both IDs exist in the database<br>
+    2. Find the database individual_id that corresponds to the working and remove IDs<br>
+    3. Update all the the IndividualIdentifier and Sample entries that use the remove_id individual_id with the working_id individual_id<br>
+    4. Finally delete the PhenodbIdentifier and Individual entries corresponding to the remove_id individual_id <br>
     
     <b>Samples</b><br>
     &nbsp&nbsp&ltsample_id&gt &ltcentre&gt &ltcentre_id&gt <br>
@@ -135,18 +144,13 @@ class BulkUploadAdmin(admin.ModelAdmin):
         
         elif import_data_type == 'remove_ind_dups':
             
-            # take in a list of individual IDs and Centre
-            
             if file_delimiter == "tab":
                 records = csv.DictReader(request.FILES["file_to_import"], delimiter='\t')
             else:
                 records = csv.DictReader(request.FILES["file_to_import"])
             
             for line in records:
-                
-                print line
-                
-                ## required columns: Centre,Centre ID                
+                                
                 try:
                     working_id = line['working_id']
                     remove_id = line['remove_id'] 
@@ -155,81 +159,47 @@ class BulkUploadAdmin(admin.ModelAdmin):
                     messages.error(request, u"Input file is missing required column(s) 'working_id remove_id centre'")
                     return
                 
-                
-                print working_id + " working id"
-                print remove_id + " remove id"
-                print centre + " centre"     
-                
                 try:
                     source = Source.objects.get(source_name=centre)
                 except Source.DoesNotExist:
                     messages.error(request, u"Can't find source in database '" + centre + u"'")
                     continue
                 
+                print IndividualIdentifier.objects.filter(individual_string=working_id,source_id=source.id).count()
+                
                 ## check that the working ID exists
                 if IndividualIdentifier.objects.filter(individual_string=working_id,source_id=source.id).count() < 1:
-                    messages.error(request, u"Individual '" + working_id + u"' does not exist in the database")
+                    messages.error(request, u"Working ID '" + working_id + u"' does not exist in the database")
                     continue
-                 
+                
                 ## check that the remove ID exists
                 if IndividualIdentifier.objects.filter(individual_string=remove_id,source_id=source.id).count() < 1:
-                    messages.error(request, u"Individual '" + remove_id + u"' does not exist in the database")
+                    messages.error(request, u"Remove ID '" + remove_id + u"' does not exist in the database")
                     continue
                 
-                ## get the database indivdual ID of the working ID
-                indIDs = IndividualIdentifier.objects.filter(individual_string=working_id,source_id=source.id).values('individual_id')
+                ## get the indivdual indentifier object of the working ID
+                workingIndividualIdentifier = IndividualIdentifier.objects.get(individual_string=working_id,source_id=source.id)
                 
-                print indIDs
+                ## get the indivdual indentifier object of the remove ID
+                removeIndividualIdentifier = IndividualIdentifier.objects.get(individual_string=remove_id,source_id=source.id)
                 
-                
-                
-                ## get the first individual ID for the 
-                
-                 
-                
-                
-                
-                
-                ## get all the individual identifier IDs for the remove id
-#                 inds = IndividualIdentifier.objects.filter(individual_string=remove_id,source_id=source.id)
-#                 
-#                 removeIndId = inds[0].
-#                 
-#                 for ind in inds:
+                ## update all the individual identifiers to point to the working_id individual_id
+                for individualIdentifer in IndividualIdentifier.objects.filter(individual_id=removeIndividualIdentifier.individual_id):
                     
+                    individualIdentifer.individual_id = workingIndividualIdentifier.individual_id
+                
+                ## update all the samples to point to the working_id individual_id
+                for sample in Sample.objects.filter(individual_id=removeIndividualIdentifier.individual_id):
                     
-                    
-                    
+                    sample.individual_id = workingIndividualIdentifier.individual_id
                 
+                ## remove the phenodb_id
+                PhenodbIdentifier.objects.get(individual_id=removeIndividualIdentifier.individual_id).delete()
                 
-                
-                ## get all the sample IDs for the remove ID
-                
-                
-                ## start a transaction
-                
-                ## add all the individual indentifier ids to the working id
-                
-                ## add all the remove sample ids to the working id
-                
-                ## remove the remove indiviudal and phenodb id
-                
-                
-                
-                
-                
-                
-                ## remove the remove id
-                 
-                 
-                 
+                ## remove the individual
+                Individual.objects.get(id=removeIndividualIdentifier.individual_id).delete()
+             
             return
-            
-            
-            
-            
-            
-            
         
         elif import_data_type == "sample_qc":
             
