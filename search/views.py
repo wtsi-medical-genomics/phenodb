@@ -266,7 +266,9 @@ def querybuilder(request):
                     
                     for line in textarea_values:
                         if (line.split()):
-                            line_vals = str.split(str(line.strip()))
+                            line_vals = str(line.strip()).split(',')
+                            print line_vals
+                            
                             if len(line_vals) == 1:
                                 user_ids.append([line_vals[0]])
                             elif len(line_vals) == 2:
