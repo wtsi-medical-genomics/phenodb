@@ -17,6 +17,10 @@
 		fill-opacity: .9;
 	}
 
+	.x.axis text {
+ 		text-anchor: start !important;
+	}
+
 	.x.axis path {
 		display: none;
 	}
@@ -38,15 +42,25 @@
 		left : 40
 	}, width = 960 - margin.left - margin.right, height = 600 - margin.top - margin.bottom;
 
-	var x = d3.scale.ordinal().rangeRoundBands([0, width], .1, 1);
+	var x = d3.scale.ordinal()
+		.rangeRoundBands([0, width], .1, 1);
 
-	var y = d3.scale.linear().range([height, 0]);
+	var y = d3.scale.linear()
+		.range([height, 0]);
 
-	var xAxis = d3.svg.axis().scale(x).orient("bottom");
+	var xAxis = d3.svg.axis()
+		.scale(x)
+		.orient("bottom");
 
-	var yAxis = d3.svg.axis().scale(y).orient("left");
+	var yAxis = d3.svg.axis()
+		.scale(y)
+		.orient("left");
 
-	var svg = d3.select("#content").append("svg").attr("width", width + margin.left + margin.right).attr("height", height + margin.top + margin.bottom).append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+	var svg = d3.select("#content").append("svg")
+		.attr("width", width + margin.left + margin.right)
+		.attr("height", height + margin.top + margin.bottom)
+		.append("g")
+			.attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
 	d3.tsv("data", function(error, data) {
 
@@ -61,48 +75,64 @@
 			return d.count;
 		})]);
 
-		var axis = svg.append("g").attr("class", "x axis").attr("transform", "translate(0," + height + ")").call(xAxis);
+		var axis = svg.append("g")
+			.attr("class", "x axis")
+			.attr("transform", "translate(0," + height + ")")
+			.call(xAxis);
 		
-		//axis.selectAll("text").attr("transform", function(d) { return "rotate(90)translate(" + this.getBBox().height/2 + "," + this.getBBox().width/2 + ")";});		
-		axis.selectAll("text").attr("transform", function(d) { return "rotate(50)translate(" + 80  + "," + -10 + ")";});	
+		axis.selectAll("text")
+			.attr("transform", function(d) { return "rotate(50)translate(10, -5 )";});
 		
-		svg.append("g").attr("class", "y axis").call(yAxis).append("text").attr("transform", "rotate(-90)").attr("y", 6).attr("dy", ".71em").style("text-anchor", "end").text("count");
+		svg.append("g")
+				.attr("class", "y axis")
+				.call(yAxis)
+			.append("text")
+				.attr("transform", "rotate(-90)")
+				.attr("y", 6)
+				.attr("dy", ".71em")
+				.style("text-anchor", "end")
+				.text("count");
 
-		svg.selectAll(".bar").data(data).enter().append("rect").attr("class", "bar").attr("x", function(d) {
-			return x(d.value);
-		}).attr("width", x.rangeBand()).attr("y", function(d) {
-			return y(d.count);
-		}).attr("height", function(d) {
-			return height - y(d.count);
-		});
+		svg.selectAll(".bar")
+			.data(data)
+		.enter().append("rect")
+			.attr("class", "bar")
+			.attr("x", function(d) { return x(d.value);	})
+			.attr("width", x.rangeBand())
+			.attr("y", function(d) { return y(d.count);	})
+			.attr("height", function(d) { return height - y(d.count); });
 
 		d3.select("input").on("change", change);
 
 		var sortTimeout = setTimeout(function() {
-			d3.select("input").property("checked", true).each(change);
+			d3.select("input")
+			.property("checked", true)
+			.each(change);
 		}, 1000);
 
 		function change() {
 			clearTimeout(sortTimeout);
 
 			// Copy-on-write since tweens are evaluated after a delay.
-			var x0 = x.domain(data.sort(this.checked ? function(a, b) {
-				return b.count - a.count;
-			} : function(a, b) {
-				return d3.ascending(a.value, b.value);
-			}).map(function(d) {
-				return d.value;
-			})).copy();
+			var x0 = x.domain(data.sort(this.checked
+				? function(a, b) {return b.count - a.count;}
+				: function(a, b) {return d3.ascending(a.value, b.value);})
+			.map(function(d) {return d.value;})
+			).copy();
 
-			var transition = svg.transition().duration(750), delay = function(d, i) {
-				return i * 50;
-			};
+			var transition = svg.transition().duration(750),
+				 delay = function(d, i) { return i * 50; };
 
-			transition.selectAll(".bar").delay(delay).attr("x", function(d) {
-				return x0(d.value);
-			});
+			transition.selectAll(".bar")
+				.delay(delay)
+				.attr("x", function(d) {
+					return x0(d.value);
+				});
 
-			transition.select(".x.axis").call(xAxis).selectAll("g").delay(delay);
+			transition.select(".x.axis")
+				.call(xAxis)
+				.selectAll("g")
+				.delay(delay);
 		}
 
 	});
