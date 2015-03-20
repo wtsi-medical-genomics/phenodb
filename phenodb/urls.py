@@ -26,6 +26,7 @@ urlpatterns = patterns('search.views',
     url(r'^search/samples/$', 'showSamples'),
     url(r'^search/samples/data$', 'getSampleData'),
     url(r'^admin/', include(admin.site.urls)),
+    url(r'^$', 'home'),
 )
 
 urlpatterns += staticfiles_urlpatterns()
