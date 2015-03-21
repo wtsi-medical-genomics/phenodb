@@ -23,7 +23,12 @@
 
 	.x.axis path {
 		display: none;
-	}
+    }
+
+    .sort-values-checkbox {
+        float: right;
+    }
+
 </style>
 
 {% endblock %}
@@ -32,7 +37,9 @@
 <p class="lead" style="margin-top: 10px;margin-bottom: 10px">
 	{{message|safe}}
 </p>
-
+<div class="sort-values-checkbox">
+    <input type="checkbox"> Sort values
+</div>
 <script src="http://d3js.org/d3.v3.min.js"></script>
 <script>
 	var margin = {
@@ -138,6 +145,5 @@
 	});
 
 </script>
-<input type="checkbox"> Sort values
 
 {% endblock %}
