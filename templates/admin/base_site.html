@@ -3,7 +3,7 @@
 {% block extrastyle %}{{ block.super }}
 <style>
     .goback {
-        float: left;
+        float: right;
         padding: 0.8em 10px;
       }
 </style>
@@ -14,4 +14,4 @@
 <h1 id="site-name">{% trans 'PhenoDB administration' %}</h1>
 {% endblock %}
 
-{% block nav-global %}<a href="/" class="goback">&laquo; Return to PhenoDB application</a>{% endblock %}
+{% block nav-global %}<a href="/" class="goback">Return to PhenoDB</a>{% endblock %}
