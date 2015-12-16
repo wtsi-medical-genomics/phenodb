@@ -5,3 +5,6 @@ phenodb/settings_test.py
 phenodb/settings_dev.py
 .project
 .pydevproject
+*.pyc
+*.swp
+*.bak
