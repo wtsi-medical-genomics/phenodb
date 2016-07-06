@@ -8,3 +8,4 @@ phenodb/settings_dev.py
 *.pyc
 *.swp
 *.bak
+.DS_Store
