@@ -3,7 +3,7 @@ from django.db import models
 class PlatformType(models.Model):
     platform_type = models.CharField(max_length=100, unique=True)
     
-    def __unicode__(self):
+    def __str__(self):
         return self.platform_type
     
 class Platform(models.Model):
@@ -11,13 +11,13 @@ class Platform(models.Model):
     platform_type = models.ForeignKey(PlatformType)
     platform_description = models.TextField()
     
-    def __unicode__(self):
+    def __str__(self):
         return self.platform_name
 
 class PhenotypeType(models.Model):
     phenotype_type = models.CharField(max_length=100, unique=True)
     
-    def __unicode__(self):
+    def __str__(self):
         return self.phenotype_type
 
 class Phenotype(models.Model):
@@ -25,7 +25,7 @@ class Phenotype(models.Model):
     phenotype_type = models.ForeignKey(PhenotypeType)
     phenotype_description = models.TextField()
 
-    def __unicode__(self):
+    def __str__(self):
         return self.phenotype_name
     
 class Individual(models.Model):
@@ -39,14 +39,14 @@ class PhenodbIdentifier(models.Model):
     date_created = models.DateTimeField()
     last_updated = models.DateTimeField()
     
-    def __unicode__(self):
+    def __str__(self):
         return self.phenodb_id
 
 class Collection(models.Model):
     collection_name = models.CharField(max_length=100, unique=True)
     collection_description = models.TextField()
     
-    def __unicode__(self):
+    def __str__(self):
         return self.collection_name
 
 class IndividualCollection(models.Model):
@@ -68,7 +68,7 @@ class AffectionStatusPhenotypeValue(models.Model):
     class Meta:
         unique_together = ('phenotype', 'individual',)
     
-    def __unicode__(self):
+    def __str__(self):
         return self.phenotype_value
     
 class QualitativePhenotypeValue(models.Model):
@@ -81,7 +81,7 @@ class QualitativePhenotypeValue(models.Model):
     class Meta:
         unique_together = ('phenotype', 'individual',)
     
-    def __unicode__(self):
+    def __str__(self):
         return self.phenotype_value
 
 class QuantitiatvePhenotypeValue(models.Model):
@@ -94,7 +94,7 @@ class QuantitiatvePhenotypeValue(models.Model):
     class Meta:
         unique_together = ('phenotype', 'individual',)
     
-    def __unicode__(self):
+    def __str__(self):
         return self.phenotype_value
 
 class Study(models.Model):
@@ -103,7 +103,7 @@ class Study(models.Model):
     data_location = models.CharField(max_length=200)
     study_description = models.TextField()
     
-    def __unicode__(self):
+    def __str__(self):
         return self.study_name
 
 class Sample(models.Model):
@@ -125,7 +125,7 @@ class StudySample(models.Model):
 class SampleFeatureType(models.Model):
     sample_feature_type = models.CharField(max_length=100, unique=True)
     
-    def __unicode__(self):
+    def __str__(self):
         return self.sample_feature_type
 
 class SampleFeature(models.Model):
@@ -133,7 +133,7 @@ class SampleFeature(models.Model):
     sample_feature_type = models.ForeignKey(SampleFeatureType)
     sample_feature_description = models.TextField()
 
-    def __unicode__(self):
+    def __str__(self):
         return self.sample_feature_name    
     
 class AffectionStatusSampleFeatureValue(models.Model):
@@ -143,7 +143,7 @@ class AffectionStatusSampleFeatureValue(models.Model):
     date_created = models.DateTimeField()
     last_updated = models.DateTimeField()
     
-    def __unicode__(self):
+    def __str__(self):
         return self.sample_feature_value
     
 class QualitativeSampleFeatureValue(models.Model):
@@ -153,7 +153,7 @@ class QualitativeSampleFeatureValue(models.Model):
     date_created = models.DateTimeField()
     last_updated = models.DateTimeField()
     
-    def __unicode__(self):
+    def __str__(self):
         return self.sample_feature_value
 
 class QuantitiatveSampleFeatureValue(models.Model):
@@ -163,7 +163,7 @@ class QuantitiatveSampleFeatureValue(models.Model):
     date_created = models.DateTimeField()
     last_updated = models.DateTimeField()
     
-    def __unicode__(self):
+    def __str__(self):
         return self.sample_feature_value    
     
 class Source(models.Model):
@@ -171,7 +171,7 @@ class Source(models.Model):
     contact_name = models.CharField(max_length=100)
     source_description = models.TextField()
     
-    def __unicode__(self):
+    def __str__(self):
         return self.source_name
 
 class IndividualIdentifier(models.Model):
@@ -184,14 +184,14 @@ class IndividualIdentifier(models.Model):
     class Meta:
         unique_together = ('individual_string', 'source',)
         
-    def __unicode__(self):
+    def __str__(self):
         return self.individual_string
 
 class QC(models.Model):
     qc_name = models.CharField(max_length=100, unique=True)
     qc_description = models.TextField()
     
-    def __unicode__(self):
+    def __str__(self):
         return self.qc_name
     
 class SampleQC(models.Model):
