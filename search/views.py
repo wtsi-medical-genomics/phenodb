@@ -5,7 +5,7 @@ from django.core import serializers
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 import csv
 import json
-import StringIO
+import io
 import time
 
 ## Fudge required for generating plots in production because writing to sys.stdout is by default restricted in versions of mod_wsgi
@@ -170,7 +170,7 @@ def getPhenotypePlotData(request, phenotype_id):
     for r in phenotype_value_counts:
         myWriter.writerow(r)    
     
-    print myFakeFile.getvalue()
+    print(myFakeFile.getvalue())
     
     return HttpResponse(myFakeFile.getvalue(), content_type='text/tab-separated-values')
 
@@ -267,7 +267,7 @@ def querybuilder(request):
                     for line in textarea_values:
                         if (line.split()):
                             line_vals = str(line.strip()).split(',')
-                            print line_vals
+                            print(line_vals)
                             
                             if len(line_vals) == 1:
                                 user_ids.append([line_vals[0]])
