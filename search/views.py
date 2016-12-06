@@ -17,6 +17,9 @@ sys.stdout = sys.stderr
 from search.models import IndividualIdentifier, AffectionStatusPhenotypeValue, QualitativePhenotypeValue, QuantitiatvePhenotypeValue, Phenotype, Platform, Individual, Study, Sample, Source, QC, Collection, StudySample, PhenodbIdentifier, MissingSampleID
 from search.tables import PhenotypeTable, PlatformTable, StudyTable, QCTable, SourceTable, CollectionTable, MissingTable, MissingStudyTable
 
+def foo(request):
+    return HttpResponse('Hi there')
+
 def home(request):
     return render(request, 'search/home.html', {})
 
