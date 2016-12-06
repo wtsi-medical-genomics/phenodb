@@ -1,8 +1,10 @@
+{% load static %}
+
 <!DOCTYPE html>
 <html lang="en">
 <head>  
-  <link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}css/bootstrap.css" />
-  <link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}css/bootstrap-responsive.css" />
+  <link rel="stylesheet" type="text/css" href="{% static "css/bootstrap.css" %}" />
+  <link rel="stylesheet" type="text/css" href="{% static "css/bootstrap-responsive.css" %}" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}PhenoDB{% endblock %}</title>
   {% block script %}

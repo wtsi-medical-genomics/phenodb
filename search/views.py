@@ -104,7 +104,7 @@ def getIndividualData(request):
     fieldnames = ['value','count']
     headers = dict( (n,n) for n in fieldnames )
     
-    myFakeFile = StringIO.StringIO()
+    myFakeFile = io.StringIO()
     myWriter = csv.DictWriter( myFakeFile, fieldnames, delimiter='\t')
     myWriter.writerow(headers)
     for s in source_counts:
@@ -126,7 +126,7 @@ def getSampleData(request):
     fieldnames = ['value','count']
     headers = dict( (n,n) for n in fieldnames )
     
-    myFakeFile = StringIO.StringIO()
+    myFakeFile = io.StringIO()
     myWriter = csv.DictWriter( myFakeFile, fieldnames, delimiter='\t')
     myWriter.writerow(headers)
     for s in study_counts:
@@ -167,7 +167,7 @@ def getPhenotypePlotData(request, phenotype_id):
     fieldnames = ['value','count']
     headers = dict( (n,n) for n in fieldnames )
     
-    myFakeFile = StringIO.StringIO()
+    myFakeFile = io.StringIO()
     myWriter = csv.DictWriter( myFakeFile, fieldnames, delimiter='\t')
     myWriter.writerow(headers)
     for r in phenotype_value_counts:
