@@ -44,7 +44,7 @@ def showMissing(request):
     study_counts = []
     for study in Study.objects.all():
         study_counts.append({'study_id': study.id, 'study_name': study.study_name, 'missing_sample_count': MissingSampleID.objects.filter(study_id=study.id).count()})
-            
+
     table = MissingTable(study_counts)
     return render(request, 'search/dataview.html', {'table': table})
 
@@ -83,7 +83,7 @@ def showPhenotypes(request):
             not_null_total = QuantitiatvePhenotypeValue.objects.filter(phenotype_id=phenotype.id, phenotype_value__isnull=False).values('phenotype_value').count()
         phenotype_values.append({'phenotype_id':phenotype.id, 'phenotype_name':phenotype.phenotype_name, 'description':phenotype.phenotype_description, 'values':values_str, 'total_records': not_null_total})    
     table = PhenotypeTable(phenotype_values)
-    
+
     return render(request, 'search/dataview.html', {'table': table})
 
 def showIndividuals(request):

@@ -5,10 +5,10 @@ from . import views
 app_name = 'search'
 urlpatterns = [
     url(r'^$', views.home, name='home'),
-    url(r'^querybuilder/$', views.querybuilder, 'querybuilder'),
+    url(r'^querybuilder/$', views.querybuilder, name='querybuilder'),
     url(r'^querybuilder/(?P<menuid>[-\w]+)/all_json_models/$', views.all_json_models, name='all_json_models'),
     url(r'^querybuilder/(?P<menuid>[-\w]+)/(?P<menuval>[-\w]+)/all_search_options/$', views.all_search_options, name='all_search_options'),
-    # url(r'^querybuilder/(?P<page>\d+)/(?P<results_per_page>\d+)/*$', 'querypage', views., name="search-querypage"),
+    url(r'^querybuilder/(?P<page>\d+)/(?P<results_per_page>\d+)/*$', views.querypage, name="search-querypage"),
     #url(r'^querybuilder/export/*$', 'query_export', views., name="search-exportcsv"),
     url(r'^phenotypes/$', views.showPhenotypes, name='showPhenotypes'),
     url(r'^phenotypes/(?P<phenotype_id>\w+)/data/$', views.getPhenotypePlotData, name='getPhenotypePlotData'),
