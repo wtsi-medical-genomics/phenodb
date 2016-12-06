@@ -4,7 +4,6 @@ from . import views
 
 app_name = 'search'
 urlpatterns = [
-    url(r'^foo/$', views.foo, name='foo'),
     url(r'^$', views.home, name='home'),
     url(r'^querybuilder/$', views.querybuilder, 'querybuilder'),
     url(r'^querybuilder/(?P<menuid>[-\w]+)/all_json_models/$', views.all_json_models, name='all_json_models'),
