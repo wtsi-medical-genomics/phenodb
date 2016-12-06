@@ -14,8 +14,8 @@ import sys
 sys.stdout = sys.stderr
 
 # internal imports
-from search.models import IndividualIdentifier, AffectionStatusPhenotypeValue, QualitativePhenotypeValue, QuantitiatvePhenotypeValue, Phenotype, Platform, Individual, Study, Sample, Source, QC, Collection, StudySample, PhenodbIdentifier, MissingSampleID
-from search.tables import PhenotypeTable, PlatformTable, StudyTable, QCTable, SourceTable, CollectionTable, MissingTable, MissingStudyTable
+from .models import IndividualIdentifier, AffectionStatusPhenotypeValue, QualitativePhenotypeValue, QuantitiatvePhenotypeValue, Phenotype, Platform, Individual, Study, Sample, Source, QC, Collection, StudySample, PhenodbIdentifier, MissingSampleID
+from .tables import PhenotypeTable, PlatformTable, StudyTable, QCTable, SourceTable, CollectionTable, MissingTable, MissingStudyTable
 
 def home(request):
     return render(request, 'search/home.html', {})
@@ -105,7 +105,7 @@ def getIndividualData(request):
     myWriter = csv.DictWriter( myFakeFile, fieldnames, delimiter='\t')
     myWriter.writerow(headers)
     for s in source_counts:
-        myWriter.writerow(s)    
+        myWriter.writerow(s)
     
     return HttpResponse(myFakeFile.getvalue(), content_type='text/tab-separated-values')
 

@@ -2,6 +2,7 @@ import django_tables2 as tables
 from django_tables2.utils import Accessor
 from search.models import Platform, Study, QC, Source, Individual, Sample, Collection, MissingSampleID
 
+
 class PlatformTable(tables.Table):        
     class Meta:
         model  = Platform
@@ -11,7 +12,7 @@ class PlatformTable(tables.Table):
 class StudyTable(tables.Table):        
     class Meta:
         model  = Study
-        fields = ('study_name', 'platform', 'data_location', 'study_description')         
+        fields = ('study_name', 'platform', 'data_location', 'study_description')
         attrs  = {'class': 'table table-striped table-bordered'}
         
 class QCTable(tables.Table):        
@@ -34,7 +35,7 @@ class CollectionTable(tables.Table):
         
 class MissingTable(tables.Table):        
     study_name = tables.Column()
-    missing_sample_count = tables.LinkColumn('search.views.showMissingStudy', args=[Accessor("study_id")])
+    missing_sample_count = tables.LinkColumn('search:showMissingStudy', args=[Accessor("study_id")])
     
     class Meta:
         attrs = {'class': 'table table-striped table-bordered'}    
@@ -67,7 +68,7 @@ class CountTable(tables.Table):
 class PhenotypeTable(tables.Table):        
     phenotype_name = tables.Column()
     description    = tables.Column()
-    values         = tables.LinkColumn('search.views.showPhenotypePlot', args=[Accessor("phenotype_id")])
+    values         = tables.LinkColumn('search:showPhenotypePlot', args=[Accessor("phenotype_id")])
     total_records  = tables.Column()
     
     class Meta:
