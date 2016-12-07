@@ -1,5 +1,5 @@
 from django.test import TestCase
-from search.models import *
+from .models import *
 from django.contrib.auth.models import User
 import datetime
 from django.db import IntegrityError

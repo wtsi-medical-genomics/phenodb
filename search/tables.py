@@ -1,6 +1,6 @@
 import django_tables2 as tables
 from django_tables2.utils import Accessor
-from search.models import Platform, Study, QC, Source, Individual, Sample, Collection, MissingSampleID
+from .models import Platform, Study, QC, Source, Individual, Sample, Collection, MissingSampleID
 
 
 class PlatformTable(tables.Table):        

@@ -1,17 +1,8 @@
 {% extends "admin/base.html" %}
 {% load i18n %}
-{% block extrastyle %}{{ block.super }}
-<style>
-    .goback {
-        float: right;
-        padding: 0.8em 10px;
-      }
-</style>
-{% endblock %}
+
 {% block title %}{{ title }} | {% trans 'PhenoDB site admin' %}{% endblock %}
 
 {% block branding %}
 <h1 id="site-name">{% trans 'PhenoDB administration' %}</h1>
 {% endblock %}
-
-{% block nav-global %}<a href="/" class="goback">Return to PhenoDB</a>{% endblock %}
