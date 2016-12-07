@@ -188,7 +188,7 @@ def all_json_models(request, menuid):
         menuitems = Source.objects.all()
         
     json_models = serializers.serialize("json", menuitems)
-    return HttpResponse(json_models, mimetype="application/javascript")
+    return HttpResponse(json_models, content_type="application/javascript")
 
 def all_search_options(request, menuid, menuval):
     menuitems = []    
@@ -203,7 +203,7 @@ def all_search_options(request, menuid, menuval):
     else:
         menuitems = [{"value": "true", "text": "True" },{"value": "false", "text": "False"}]
         
-    return HttpResponse(json.dumps(menuitems), mimetype="application/javascript")
+    return HttpResponse(json.dumps(menuitems), content_type="application/javascript")
 
 def generate_html_table(output, query_results):
     table_html = "<table class=\"table table-striped table-bordered\">"
@@ -418,7 +418,7 @@ def query_export(request):
     result_ids_objs = parse_query_results(result_ids)
     parsed_results = get_output_data(result_ids_objs, output)
         
-    response = HttpResponse(mimetype='text/csv')
+    response = HttpResponse(content_type='text/csv')
     response['Content-Disposition'] = 'attachment; filename="export.tsv"'
     
     writer = csv.writer(response, delimiter="\t")
