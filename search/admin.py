@@ -9,6 +9,17 @@ from decimal import *
 from django.db import IntegrityError, DatabaseError
 from django.contrib import messages
 from django.db import transaction
+from io import TextIOWrapper
+
+def read_csv(csvFile, delimiter):
+    # pdb.set_trace()
+    f = TextIOWrapper(csvFile.file, encoding='UTF-8')
+    if delimiter == 'tab':
+        reader = csv.DictReader(f, delimiter)
+    else:
+        reader = csv.DictReader(f)
+    for row in reader:
+        yield(row)
 
 
 class BulkUploadForm(forms.ModelForm):
@@ -145,10 +156,7 @@ class BulkUploadAdmin(admin.ModelAdmin):
         
         elif import_data_type == 'remove_ind_dups':
             
-            if file_delimiter == "tab":
-                records = csv.DictReader(request.FILES["file_to_import"], delimiter='\t')
-            else:
-                records = csv.DictReader(request.FILES["file_to_import"])
+            records = read_csv(request.FILES["file_to_import"], file_delimiter)
             
             for line in records:
                                 
@@ -210,10 +218,7 @@ class BulkUploadAdmin(admin.ModelAdmin):
             study = Study.objects.get(id=study_id)
             qc    = QC.objects.get(id=qc_id)
             
-            if file_delimiter == "tab":
-                records = csv.DictReader(request.FILES["file_to_import"], delimiter='\t')
-            else:
-                records = csv.DictReader(request.FILES["file_to_import"])
+            records = read_csv(request.FILES["file_to_import"], file_delimiter)
             
             for line in records:
                 
@@ -257,10 +262,7 @@ class BulkUploadAdmin(admin.ModelAdmin):
             
         elif import_data_type == "individuals":
             
-            if file_delimiter == "tab":
-                records = csv.DictReader(request.FILES["file_to_import"], delimiter='\t')
-            else:
-                records = csv.DictReader(request.FILES["file_to_import"])
+            records = read_csv(request.FILES["file_to_import"], file_delimiter)
             
             for line in records:
                 try:
@@ -429,10 +431,7 @@ class BulkUploadAdmin(admin.ModelAdmin):
             
         elif import_data_type == "phenotypes":
             
-            if file_delimiter == "tab":
-                records = csv.DictReader(request.FILES["file_to_import"], delimiter='\t')
-            else:
-                records = csv.DictReader(request.FILES["file_to_import"])
+            records = read_csv(request.FILES["file_to_import"], file_delimiter)
             
             for line in records:
                 try:
@@ -464,10 +463,7 @@ class BulkUploadAdmin(admin.ModelAdmin):
         
         elif import_data_type == "sources":
             
-            if file_delimiter == "tab":
-                records = csv.DictReader(request.FILES["file_to_import"], delimiter='\t')
-            else:
-                records = csv.DictReader(request.FILES["file_to_import"])
+            records = read_csv(request.FILES["file_to_import"], file_delimiter)
             
             for line in records:
                 try:
@@ -492,10 +488,7 @@ class BulkUploadAdmin(admin.ModelAdmin):
         
         elif import_data_type == 'individual_ids':
             
-            if file_delimiter == "tab":
-                records = csv.DictReader(request.FILES["file_to_import"], delimiter='\t')
-            else:
-                records = csv.DictReader(request.FILES["file_to_import"])
+            records = read_csv(request.FILES["file_to_import"], file_delimiter)
             
             for line in records:
                 
@@ -538,10 +531,7 @@ class BulkUploadAdmin(admin.ModelAdmin):
             
         elif import_data_type == "samples":
             
-            if file_delimiter == "tab":
-                records = csv.DictReader(request.FILES["file_to_import"], delimiter='\t')
-            else:
-                records = csv.DictReader(request.FILES["file_to_import"])
+            records = read_csv(request.FILES["file_to_import"], file_delimiter)
             
             for line in records:
                 
@@ -636,10 +626,7 @@ class BulkUploadAdmin(admin.ModelAdmin):
         
         elif import_data_type == "add_sample_on_sample":
             
-            if file_delimiter == "tab":
-                records = csv.DictReader(request.FILES["file_to_import"], delimiter='\t')
-            else:
-                records = csv.DictReader(request.FILES["file_to_import"])
+            records = read_csv(request.FILES["file_to_import"], file_delimiter)
                 
             for line in records:  
   
@@ -677,12 +664,9 @@ class BulkUploadAdmin(admin.ModelAdmin):
             
         elif import_data_type == "add_phenotype_values":
             
-            if file_delimiter == "tab":
-                records = csv.DictReader(request.FILES["file_to_import"], delimiter='\t')
-            else:
-                records = csv.DictReader(request.FILES["file_to_import"])
+            records = read_csv(request.FILES["file_to_import"], file_delimiter)
             
-            for line in records:   
+            for line in records:
                 
                 try:
                     centre = line['centre']
@@ -804,10 +788,7 @@ class BulkUploadAdmin(admin.ModelAdmin):
             
             sample_feature = SampleFeature.objects.get(id=request.POST["sample_feature_id"])
             
-            if file_delimiter == "tab":
-                records = csv.DictReader(request.FILES["file_to_import"], delimiter='\t')
-            else:
-                records = csv.DictReader(request.FILES["file_to_import"])
+            records = read_csv(request.FILES["file_to_import"], file_delimiter)
             
             for line in records:   
                 
@@ -828,10 +809,7 @@ class BulkUploadAdmin(admin.ModelAdmin):
         
         elif import_data_type == "check_samples_in_warehouse":
             
-            if file_delimiter == "tab":
-                records = csv.DictReader(request.FILES["file_to_import"], delimiter='\t')
-            else:
-                records = csv.DictReader(request.FILES["file_to_import"])
+            records = read_csv(request.FILES["file_to_import"], file_delimiter)
         
             for line in records:
                            
