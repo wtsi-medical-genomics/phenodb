@@ -11,8 +11,9 @@ from django.contrib import messages
 from django.db import transaction
 
 
-class BulkUploadForm(forms.Form):
+class BulkUploadForm(forms.ModelForm):
     
+    # fields
     import_options = (
         ('phenotypes','Phenotypes'),
         ('sources','Sources'),
@@ -83,8 +84,8 @@ class BulkUploadForm(forms.Form):
     study_id = forms.ModelChoiceField(Study.objects.all(), required=False, help_text = "Only required when adding Study Samples")
     qc_id = forms.ModelChoiceField(QC.objects.all(), required=False, help_text = "Only required when adding Samples QC values")
 
-    class Meta:
-        model = BulkUpload
+    # class Meta:
+    #     model = BulkUpload
 
 class BulkUploadAdmin(admin.ModelAdmin):
     
