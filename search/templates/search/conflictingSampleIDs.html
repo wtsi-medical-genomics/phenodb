@@ -1,0 +1,43 @@
+{% extends "search/base.html" %}
+
+{% block content %} 
+    <p class="lead" style="margin-top: 10px;margin-bottom: 10px; color: red">
+        {{warning|safe}}
+    </p>
+    
+    <table class="table table-bordered">
+    <thead>
+        <tr>
+            <th>Sample ID</th>
+            <th>PhenoDB ID</th>
+            <th>Date Created</th>
+            <th>Source:Identifiers</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for sample_id, data in duplicate_samples.items %}
+            <tr>
+                <td style="border-top: 1px solid gray ;" rowspan="{{data|length}}">{{sample_id}}</td>
+                <td style="border-top: 1px solid gray ;">{{data.0.phenodbid}}</td>
+                <td style="border-top: 1px solid gray ;">{{data.0.date}}</td>
+                <td style="border-top: 1px solid gray ;">
+                    {% for source, identifiers in data.0.individual_identifier_sources.items %}
+                        <span style="color: darkblue;">{{source}}</span>:&nbsp;{{identifiers}}<br>
+                    {% endfor %}
+                </td>
+            </tr>
+            {% for el in data|slice:"1:" %}
+                <tr>
+                    <td>{{el.phenodbid}}</td>
+                    <td>{{el.date}}</td>
+                    <td>
+                        {% for source, identifiers in el.individual_identifier_sources.items %}
+                            <span style="color: darkblue;">{{source}}</span>:&nbsp;{{identifiers}}<br>
+                        {% endfor %}
+                    </td>
+                </tr>
+            {% endfor %}
+        {% endfor %}
+    </tbody>
+    </table>
+{% endblock %}

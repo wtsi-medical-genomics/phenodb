@@ -63,9 +63,9 @@ class CountTable(tables.Table):
     count = tables.Column()
     
     class Meta:         
-        attrs = {'class': 'table table-striped table-bordered'}                
+        attrs = {'class': 'table table-striped table-bordered'}
 
-class PhenotypeTable(tables.Table):        
+class PhenotypeTable(tables.Table):
     phenotype_name = tables.Column()
     description    = tables.Column()
     values         = tables.LinkColumn('search:showPhenotypePlot', args=[Accessor("phenotype_id")])
@@ -73,3 +73,11 @@ class PhenotypeTable(tables.Table):
     
     class Meta:
         attrs = {'class': 'table table-striped table-bordered'}
+
+class ConflictingSampleIDsTable(tables.Table):
+    PhenodbIDs = tables.Column()
+    SampleID = tables.Column()
+
+    class Meta:
+        attrs = {'class': 'table table-striped table-bordered'}
+        sequence = ('SampleID', 'PhenodbIDs')

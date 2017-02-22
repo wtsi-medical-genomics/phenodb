@@ -7,6 +7,8 @@ import csv
 import json
 import io
 import time
+from collections import defaultdict, OrderedDict
+import pprint
 
 ## Fudge required for generating plots in production because writing to sys.stdout is by default restricted in versions of mod_wsgi
 ## This restriction can be disabled by mapping sys.stdout to sys.stderr at global scope within in the WSGI application script file.
@@ -15,7 +17,7 @@ sys.stdout = sys.stderr
 
 # internal imports
 from .models import IndividualIdentifier, AffectionStatusPhenotypeValue, QualitativePhenotypeValue, QuantitiatvePhenotypeValue, Phenotype, Platform, Individual, Study, Sample, Source, QC, Collection, StudySample, PhenodbIdentifier, MissingSampleID
-from .tables import PhenotypeTable, PlatformTable, StudyTable, QCTable, SourceTable, CollectionTable, MissingTable, MissingStudyTable
+from .tables import PhenotypeTable, PlatformTable, StudyTable, QCTable, SourceTable, CollectionTable, MissingTable, MissingStudyTable, ConflictingSampleIDsTable
 
 def home(request):
     return render(request, 'search/home.html', {})
@@ -240,6 +242,17 @@ def querybuilder(request):
         search_in = request.POST.get('searchIn')
         page      = request.GET.get('page')
         andors    = request.POST.getlist('andor')
+
+        print(request)
+        print(results_per_page)
+        print(tables)
+        print(wheres)
+        print(where_iss)
+        print(querystrs)
+        print(output)
+        print(search_in)
+        print(page)
+        print(andors)
                 
         if len(output) == 0:
             message = "No output columns selected, please select output columns and try again."
@@ -730,3 +743,41 @@ def generate_results_table(result_ids, results_per_page, page, output):
     table_html = generate_html_table(output, get_output_data(page_results, output))
     
     return table_html, page_results
+
+def conflictingSampleIDs(request):
+    samples = Sample.objects.all()
+
+    individual_ids = defaultdict(set)
+    date_createds = defaultdict(dict)
+    for sample in samples:
+        individual_ids[sample.sample_id].add(sample.individual_id)
+        date_createds[sample.sample_id][sample.individual_id] = sample.date_created.strftime('%Y-%m-%d')
+    
+    duplicate_samples = defaultdict(list)
+    for sample_id, individual_id in individual_ids.items():
+        if len(individual_id) > 1:
+            for i in individual_id:
+                IndividualIdentifier.objects.get(individual_id=1)
+                duplicate_samples[sample_id].append({
+                    'phenodbid': 'pdb{}'.format(i),
+                    'date': date_createds[sample_id][i],
+                    'individual_identifier_sources': get_individual_identifier_sources(i),
+                })
+    warning = '{} samples are attached to different phenodb IDs.'.format(len(duplicate_samples))
+    # table = ConflictingSampleIDsTable(duplicate_samples)
+    return render(request, 'search/conflictingSampleIDs.html', {
+        'duplicate_samples': dict(duplicate_samples),
+        'warning': warning,
+    })
+
+def get_individual_identifier_sources(individual_id):
+    queryset = IndividualIdentifier.objects.filter(individual_id=individual_id)
+    result = defaultdict(set)
+    for query in queryset:
+        result[query.source.source_name].add(query.individual_string)
+    prettier_result = {}
+    for k,v in result.items():
+        prettier_result[k] = ', '.join(v)
+    return prettier_result
+
+
