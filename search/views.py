@@ -757,11 +757,14 @@ def conflictingSampleIDs(request):
     for sample_id, individual_id in individual_ids.items():
         if len(individual_id) > 1:
             for i in individual_id:
-                IndividualIdentifier.objects.get(individual_id=1)
+                other_sample_ids = samples.filter(individual_id=i).exclude(sample_id=sample_id)
+                other_sample_ids = [x.sample_id for x in other_sample_ids]
+                other_sample_ids = ', '.join(sorted(other_sample_ids))
                 duplicate_samples[sample_id].append({
                     'phenodbid': 'pdb{}'.format(i),
                     'date': date_createds[sample_id][i],
                     'individual_identifier_sources': get_individual_identifier_sources(i),
+                    'other_sample_ids': other_sample_ids,
                 })
     warning = '{} samples are attached to different phenodb IDs.'.format(len(duplicate_samples))
     # table = ConflictingSampleIDsTable(duplicate_samples)
@@ -777,7 +780,5 @@ def get_individual_identifier_sources(individual_id):
         result[query.source.source_name].add(query.individual_string)
     prettier_result = {}
     for k,v in result.items():
-        prettier_result[k] = ', '.join(v)
+        prettier_result[k] = ', '.join(sorted(v))
     return prettier_result
-
-
