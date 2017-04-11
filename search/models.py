@@ -64,12 +64,15 @@ class AffectionStatusPhenotypeValue(models.Model):
     phenotype_value = models.SmallIntegerField()
     date_created = models.DateTimeField()
     last_updated = models.DateTimeField()
+    # date_measured = models.DateTimeField(null=True)
     
+    # class Meta:
+    #     unique_together = ('phenotype', 'individual', 'date_measured')
     class Meta:
-        unique_together = ('phenotype', 'individual',)
+        unique_together = ('phenotype', 'individual')
     
     def __str__(self):
-        return self.phenotype_value
+        return str(self.phenotype_value)
     
 class QualitativePhenotypeValue(models.Model):
     phenotype = models.ForeignKey(Phenotype)
@@ -77,9 +80,12 @@ class QualitativePhenotypeValue(models.Model):
     phenotype_value = models.CharField(max_length=200)
     date_created = models.DateTimeField()
     last_updated = models.DateTimeField()
-    
+    #date_measured = models.DateTimeField(null=True)
+
+    # class Meta:
+    #     unique_together = ('phenotype', 'individual', 'date_measured')
     class Meta:
-        unique_together = ('phenotype', 'individual',)
+        unique_together = ('phenotype', 'individual')
     
     def __str__(self):
         return self.phenotype_value
@@ -90,12 +96,15 @@ class QuantitiatvePhenotypeValue(models.Model):
     phenotype_value = models.DecimalField(max_digits=10, decimal_places=2)
     date_created = models.DateTimeField()
     last_updated = models.DateTimeField()
-    
+    # date_measured = models.DateTimeField(null=True)
+
+    # class Meta:
+    #     unique_together = ('phenotype', 'individual', 'date_measured')
     class Meta:
-        unique_together = ('phenotype', 'individual',)
+        unique_together = ('phenotype', 'individual')
     
     def __str__(self):
-        return self.phenotype_value
+        return str(self.phenotype_value)
 
 class Study(models.Model):
     study_name = models.CharField(max_length=100, unique=True)
@@ -111,7 +120,7 @@ class Sample(models.Model):
     sample_id = models.CharField(max_length=100)
     date_created = models.DateTimeField()
     last_updated = models.DateTimeField()
-    
+
 class StudySample(models.Model):
     study = models.ForeignKey(Study)
     sample = models.ForeignKey(Sample)
