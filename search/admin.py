@@ -2,7 +2,7 @@ from django import forms
 from .models import *
 from django.contrib import admin
 import datetime
-from django.utils.timezone import utc
+from django.utils import timezone
 import csv
 from django.db import connections
 from decimal import *
@@ -101,8 +101,6 @@ class BulkUploadForm(forms.ModelForm):
 class BulkUploadAdmin(admin.ModelAdmin):
     
     form = BulkUploadForm
-    true_list = ["Yes", "yes", "true", "True", "1", "Affected", "affected"]
-    false_list = ["No", "no", "false", "False", "0", "Unaffected", "unaffected"]
     
     #Overrides model object saving.
     def save_model(self, request, obj, form, change):
@@ -141,8 +139,8 @@ class BulkUploadAdmin(admin.ModelAdmin):
                 studySample = StudySample()
                 studySample.sample = sample
                 studySample.study = study
-                studySample.date_created = datetime.datetime.utcnow().replace(tzinfo=utc)
-                studySample.last_updated = datetime.datetime.utcnow().replace(tzinfo=utc)     
+                studySample.date_created = timezone.now()
+                studySample.last_updated = timezone.now()     
                 
                 try:
                     studySample.save()
@@ -250,8 +248,8 @@ class BulkUploadAdmin(admin.ModelAdmin):
                     sampleQC.qc_pass = True
                 else:
                     sampleQC.qc_pass = False                    
-                sampleQC.date_created = datetime.datetime.utcnow().replace(tzinfo=utc)
-                sampleQC.last_updated = datetime.datetime.utcnow().replace(tzinfo=utc)                
+                sampleQC.date_created = timezone.now()
+                sampleQC.last_updated = timezone.now()                
                 
                 try:
                     sampleQC.save()
@@ -299,8 +297,8 @@ class BulkUploadAdmin(admin.ModelAdmin):
 #                             indId.individual = sample.individual
 #                             indId.individual_string = centre_id                
 #                             indId.source = source
-#                             indId.date_created = datetime.datetime.utcnow().replace(tzinfo=utc)
-#                             indId.last_updated = datetime.datetime.utcnow().replace(tzinfo=utc)                
+#                             indId.date_created = timezone.now()
+#                             indId.last_updated = timezone.now()                
 #                             try:
 #                                 indId.save()
 #                             except IntegrityError:
@@ -312,16 +310,16 @@ class BulkUploadAdmin(admin.ModelAdmin):
                 ## an empty active_id field means that the object refers to itself!
                 ## if the active_id field is not empty, that means it refers to another individual object
                 ind = Individual()                
-                ind.date_created = datetime.datetime.utcnow().replace(tzinfo=utc)
-                ind.last_updated = datetime.datetime.utcnow().replace(tzinfo=utc)
+                ind.date_created = timezone.now()
+                ind.last_updated = timezone.now()
                 ind.save()                    
                 
                 ## create the phenodb_id
                 pdbId = PhenodbIdentifier()
                 pdbId.individual = ind
                 pdbId.phenodb_id = u"pdb" + str(ind.pk)
-                pdbId.date_created = datetime.datetime.utcnow().replace(tzinfo=utc)
-                pdbId.last_updated = datetime.datetime.utcnow().replace(tzinfo=utc)
+                pdbId.date_created = timezone.now()
+                pdbId.last_updated = timezone.now()
                 pdbId.save()
                 
                 try:
@@ -337,8 +335,8 @@ class BulkUploadAdmin(admin.ModelAdmin):
                     indColl = IndividualCollection()
                     indColl.individual = ind
                     indColl.collection = coll
-                    indColl.date_created = datetime.datetime.utcnow().replace(tzinfo=utc)
-                    indColl.last_updated = datetime.datetime.utcnow().replace(tzinfo=utc)
+                    indColl.date_created = timezone.now()
+                    indColl.last_updated = timezone.now()
                     indColl.save()
                       
                 ## insert the individual identifier
@@ -346,8 +344,8 @@ class BulkUploadAdmin(admin.ModelAdmin):
                 indId.individual = ind
                 indId.individual_string = centre_id                
                 indId.source = source
-                indId.date_created = datetime.datetime.utcnow().replace(tzinfo=utc)
-                indId.last_updated = datetime.datetime.utcnow().replace(tzinfo=utc)                
+                indId.date_created = timezone.now()
+                indId.last_updated = timezone.now()                
                 try:
                     indId.save()
                 except IntegrityError:
@@ -452,8 +450,8 @@ class BulkUploadAdmin(admin.ModelAdmin):
                 newIndId.individual = indId.individual
                 newIndId.individual_string = new_centre_id
                 newIndId.source = source
-                newIndId.date_created = datetime.datetime.utcnow().replace(tzinfo=utc)
-                newIndId.last_updated = datetime.datetime.utcnow().replace(tzinfo=utc)
+                newIndId.date_created = timezone.now()
+                newIndId.last_updated = timezone.now()
                 try:
                     newIndId.save()
                 except IntegrityError:
@@ -496,8 +494,8 @@ class BulkUploadAdmin(admin.ModelAdmin):
                 sample = Sample()
                 sample.individual = sampleIndId.individual
                 sample.sample_id = sample_id
-                sample.date_created = datetime.datetime.utcnow().replace(tzinfo=utc)
-                sample.last_updated = datetime.datetime.utcnow().replace(tzinfo=utc)
+                sample.date_created = timezone.now()
+                sample.last_updated = timezone.now()
                 
                 warehouseCursor = connections['warehouse'].cursor()
                 
@@ -519,8 +517,8 @@ class BulkUploadAdmin(admin.ModelAdmin):
                         indId.individual = sampleIndId.individual
                         indId.individual_string = row[1]
                         indId.source = source
-                        indId.date_created = datetime.datetime.utcnow().replace(tzinfo=utc)
-                        indId.last_updated = datetime.datetime.utcnow().replace(tzinfo=utc)
+                        indId.date_created = timezone.now()
+                        indId.last_updated = timezone.now()
                         try:
                             indId.save()
                         except IntegrityError:
@@ -543,8 +541,8 @@ class BulkUploadAdmin(admin.ModelAdmin):
                         studySample = StudySample()
                         studySample.sample = sample
                         studySample.study = missingSample.study
-                        studySample.date_created = datetime.datetime.utcnow().replace(tzinfo=utc)
-                        studySample.last_updated = datetime.datetime.utcnow().replace(tzinfo=utc)     
+                        studySample.date_created = timezone.now()
+                        studySample.last_updated = timezone.now()     
                 
                         try:
                             studySample.save()
@@ -587,8 +585,8 @@ class BulkUploadAdmin(admin.ModelAdmin):
                 newSample = Sample()
                 newSample.individual = individual
                 newSample.sample_id = new_sample_id
-                newSample.date_created = datetime.datetime.utcnow().replace(tzinfo=utc)
-                newSample.last_updated = datetime.datetime.utcnow().replace(tzinfo=utc)
+                newSample.date_created = timezone.now()
+                newSample.last_updated = timezone.now()
                 newSample.save()
             return
             
@@ -711,8 +709,8 @@ class BulkUploadAdmin(admin.ModelAdmin):
                 affectVal.phenotype = pheno
                 affectVal.individual = individual
                 affectVal.phenotype_value = phenotype_value
-                affectVal.date_created = datetime.datetime.utcnow().replace(tzinfo=utc)
-                affectVal.last_updated = datetime.datetime.utcnow().replace(tzinfo=utc)
+                affectVal.date_created = timezone.now()
+                affectVal.last_updated = timezone.now()
             try:
                 affectVal.save()
             except:
@@ -741,8 +739,8 @@ class BulkUploadAdmin(admin.ModelAdmin):
                 qualVal.phenotype = pheno
                 qualVal.individual = individual
                 qualVal.phenotype_value = phenotype_value
-                qualVal.date_created = datetime.datetime.utcnow().replace(tzinfo=utc)
-                qualVal.last_updated = datetime.datetime.utcnow().replace(tzinfo=utc)                        
+                qualVal.date_created = timezone.now()
+                qualVal.last_updated = timezone.now()                        
             try:
                 qualVal.save()
             except:
@@ -766,8 +764,8 @@ class BulkUploadAdmin(admin.ModelAdmin):
                 quantVal.phenotype = pheno
                 quantVal.individual = individual
                 quantVal.phenotype_value = phenotype_value
-                quantVal.date_created = datetime.datetime.utcnow().replace(tzinfo=utc)
-                quantVal.last_updated = datetime.datetime.utcnow().replace(tzinfo=utc)
+                quantVal.date_created = timezone.now()
+                quantVal.last_updated = timezone.now()
             try:
                 quantVal.save()
             except:
