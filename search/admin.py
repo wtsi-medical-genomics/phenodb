@@ -8,8 +8,9 @@ from django.db import connections
 from decimal import *
 from django.db import IntegrityError, DatabaseError
 from django.contrib import messages
-from django.db import transaction
 from io import TextIOWrapper
+from . import phenotype_encoding as pe
+
 
 def read_csv(csvFile, delimiter):
     # pdb.set_trace()
@@ -20,7 +21,6 @@ def read_csv(csvFile, delimiter):
         reader = csv.DictReader(f)
     for row in reader:
         yield(row)
-
 
 class BulkUploadForm(forms.ModelForm):
     
@@ -163,7 +163,7 @@ class BulkUploadAdmin(admin.ModelAdmin):
                 try:
                     working_id = line['working_id']
                     remove_id = line['remove_id'] 
-                    centre = line['centre']                     
+                    centre = line['centre']
                 except KeyError:
                     messages.error(request, u"Input file is missing required column(s) 'working_id remove_id centre'")
                     return
@@ -356,77 +356,11 @@ class BulkUploadAdmin(admin.ModelAdmin):
                                         
                 ## insert phenotype values
                 for col in line:                      
-                    try:   
-                        if len(line[col]) == 0:
-                            continue
-                    except TypeError:
-                        ## vale is None
-                        continue
-                                   
-                    try:
-                        pheno = Phenotype.objects.get(phenotype_name=col)
-                    except Phenotype.DoesNotExist:
-#                        messages.error(request, u"Warning Can't find phenotype '" + col + "' in database")
-                        continue
-                    
-                    if pheno.phenotype_type.phenotype_type == u"Affection Status":
-                        affectVal = AffectionStatusPhenotypeValue()
-                        affectVal.phenotype = pheno
-                        affectVal.individual = ind
-                        ## if the value is empty or no set as false
-                        if line[col] in BulkUploadAdmin.false_list:
-                            affectVal.phenotype_value = False
-                        elif line[col] in BulkUploadAdmin.true_list:
-                            affectVal.phenotype_value = True
-                        else:
-                            continue
-                        affectVal.date_created = datetime.datetime.utcnow().replace(tzinfo=utc)
-                        affectVal.last_updated = datetime.datetime.utcnow().replace(tzinfo=utc)
-                        try:
-                            affectVal.save()
-                        except:
-                            messages.error(request, u"failed to save " + pheno.phenotype_name)           
-                    elif pheno.phenotype_type.phenotype_type == u"Qualitative":
-                        qualVal = QualitativePhenotypeValue()
-                        qualVal.phenotype = pheno
-                        qualVal.individual = ind
-                        qualVal.phenotype_value = line[col].strip()
-                        qualVal.date_created = datetime.datetime.utcnow().replace(tzinfo=utc)
-                        qualVal.last_updated = datetime.datetime.utcnow().replace(tzinfo=utc)
-                        try:
-                            qualVal.save()
-                        except:
-                            messages.error(request, u"failed to save " + pheno.phenotype_name)
-                    elif pheno.phenotype_type.phenotype_type == u"Quantitative":
-                        quantVal = QuantitiatvePhenotypeValue()
-                        quantVal.phenotype = pheno
-                        quantVal.individual = ind
-                        ## special case for sex as this often needs to be parsed
-                        if pheno.phenotype_name == "Sex":
-                            if not str.isdigit(line[col]):
-                                if str.lower(line[col]) == "female" or str.lower(line[col]) == "f":
-                                    sex = 2
-                                elif str.lower(line[col]) == "male" or str.lower(line[col]) == "m":
-                                    sex = 1
-                                else:
-                                    sex = 0
-                            else:
-                                sex = line[col]
-                            quantVal.phenotype_value = Decimal(sex)
-                        else:
-                            if str.isdigit(line[col]) == False:
-                                continue
-                            quantVal.phenotype_value = Decimal(line[col])                            
-                        quantVal.date_created = datetime.datetime.utcnow().replace(tzinfo=utc)
-                        quantVal.last_updated = datetime.datetime.utcnow().replace(tzinfo=utc)
-                        try:
-                            quantVal.save()
-                        except:
-                            messages.error(request, u"failed to save " + pheno.phenotype_name)
-                    else:
-                        messages.error(request, u"unrecognised phenotype type " + pheno.phenotype_type.phenotype_type)
-                        
-                    transaction.commit()
+                    self.saveUpdatePhenotype(phenotype_value=line[col],
+                        phenotype_name=col,
+                        individual=ind,
+                        individual_identifier=indId
+                        )
             return
             
         elif import_data_type == "phenotypes":
@@ -524,8 +458,6 @@ class BulkUploadAdmin(admin.ModelAdmin):
                     newIndId.save()
                 except IntegrityError:
                     print('not saved')
-                    pass
-                transaction.commit()
             
             return
             
@@ -601,7 +533,6 @@ class BulkUploadAdmin(admin.ModelAdmin):
                 except IntegrityError:
 #                   messages.error(request, u"Sample " + sample_id + " is already in the database")
                     continue
-                transaction.commit()
                 
                 ## now the sample is inserted check if it was a missing sample
                 if MissingSampleID.objects.filter(sample_id=sample_id).count() > 0:
@@ -659,7 +590,6 @@ class BulkUploadAdmin(admin.ModelAdmin):
                 newSample.date_created = datetime.datetime.utcnow().replace(tzinfo=utc)
                 newSample.last_updated = datetime.datetime.utcnow().replace(tzinfo=utc)
                 newSample.save()
-                transaction.commit()
             return
             
         elif import_data_type == "add_phenotype_values":
@@ -688,100 +618,13 @@ class BulkUploadAdmin(admin.ModelAdmin):
                     messages.error(request, u"Individual " + centre_id + u" NOT found in phenodb")
                     continue
                 
-                ind = sampleIndId.individual                
+                ind = sampleIndId.individual
                 
-                for col in line:                      
-                    try:   
-                        if len(line[col]) == 0:
-                            continue
-                    except TypeError:
-                        ## vale is None
-                        continue
-                                   
-                    try:
-                        pheno = Phenotype.objects.get(phenotype_name=col)
-                    except Phenotype.DoesNotExist:
-#                        messages.error(request, u"Warning Can't find phenotype '" + col + "' in database")
-                        continue
-                    
-                    if pheno.phenotype_type.phenotype_type == u"Affection Status":
-                        
-                        if line[col] in BulkUploadAdmin.false_list:
-                            phenotype_value = False
-                        elif line[col] in BulkUploadAdmin.true_list:
-                            phenotype_value = True
-                        else:
-                            continue
-                        
-                        ## update or create
-                        if AffectionStatusPhenotypeValue.objects.filter(phenotype=pheno, individual=ind).exists():
-                            affectVal = AffectionStatusPhenotypeValue.objects.get(phenotype=pheno, individual=ind)
-                            affectVal.phenotype_value = phenotype_value
-                        else:
-                            affectVal = AffectionStatusPhenotypeValue()
-                            affectVal.phenotype = pheno
-                            affectVal.individual = ind
-                            affectVal.phenotype_value = phenotype_value
-                            affectVal.date_created = datetime.datetime.utcnow().replace(tzinfo=utc)
-                            affectVal.last_updated = datetime.datetime.utcnow().replace(tzinfo=utc)
-                        try:
-                            affectVal.save()
-                        except:
-                            messages.error(request, u"failed to update " + pheno.phenotype_name + " for " + sampleIndId.individual_string)
-                        
-                    elif pheno.phenotype_type.phenotype_type == u"Qualitative":
-                        
-                        phenotype_value = line[col].strip()
-                        
-                        if QualitativePhenotypeValue.objects.filter(phenotype=pheno, individual=ind).exists():
-                            qualVal = QualitativePhenotypeValue.objects.get(phenotype=pheno, individual=ind)
-                            qualVal.phenotype_value = phenotype_value
-                        else:
-                            qualVal = QualitativePhenotypeValue()
-                            qualVal.phenotype = pheno
-                            qualVal.individual = ind
-                            qualVal.phenotype_value = phenotype_value
-                            qualVal.date_created = datetime.datetime.utcnow().replace(tzinfo=utc)
-                            qualVal.last_updated = datetime.datetime.utcnow().replace(tzinfo=utc)                        
-                        try:
-                            qualVal.save()
-                        except:
-                            messages.error(request, u"failed to update " + pheno.phenotype_name + " for " + sampleIndId.individual_string)
-                    elif pheno.phenotype_type.phenotype_type == u"Quantitative":
-                        
-                        ## special case for sex as this often needs to be parsed
-                        if pheno.phenotype_name == "Sex":
-                            if not str.isdigit(line[col]):
-                                if str.lower(line[col]) == "female":
-                                    sex = 2
-                                elif str.lower(line[col]) == "male":
-                                    sex = 1
-                                else:
-                                    sex = 0
-                            else:
-                                sex = line[col]
-                            phenotype_value = Decimal(sex)
-                        else:
-                            if str.isdigit(line[col]) == False:
-                                continue
-                            phenotype_value = Decimal(line[col])
-                            
-                        if QuantitiatvePhenotypeValue.objects.filter(phenotype=pheno, individual=ind).exists():
-                            quantVal = QuantitiatvePhenotypeValue.objects.get(phenotype=pheno, individual=ind)
-                            quantVal.phenotype_value = phenotype_value
-                        else:
-                            quantVal = QuantitiatvePhenotypeValue()
-                            quantVal.phenotype = pheno
-                            quantVal.individual = ind
-                            quantVal.phenotype_value = phenotype_value
-                            quantVal.date_created = datetime.datetime.utcnow().replace(tzinfo=utc)
-                            quantVal.last_updated = datetime.datetime.utcnow().replace(tzinfo=utc)
-                        try:
-                            quantVal.save()
-                        except:
-                            messages.error(request, u"failed to update " + pheno.phenotype_name + " for " + sampleIndId.individual_string)
-                    else:
-                        messages.error(request, u"unrecognised phenotype type " + pheno.phenotype_type.phenotype_type)
+                for col in line:
+                    self.saveUpdatePhenotype(phenotype_value=line[col],
+                        phenotype_name=col,
+                        individual=ind,
+                        individual_identifier=sampleIndId)
             return
         
         elif import_data_type == "add_sample_feature_values":
@@ -830,8 +673,109 @@ class BulkUploadAdmin(admin.ModelAdmin):
                     else:
 #                        out_file.write(str(row) + "\n")
                         continue
-                                                            
             return
+
+    def saveUpdatePhenotype(self, phenotype_value, phenotype_name, individual, individual_identifier):
+        """
+            This function creates/updates phenotypes and is called when import type
+            is both `add_phenotype_values` and `individuals`.
+        """
+        if not phenotype_value or len(phenotype_value) == 0:
+            return
+
+        try:
+            pheno = Phenotype.objects.get(phenotype_name=phenotype_name)
+        except Phenotype.DoesNotExist:
+            messages.error(request, f"Warning Can't find phenotype '{phenotype_name}' in database")
+            return
+
+        phenotype_value = phenotype_value.strip().lower()
+
+        if pheno.phenotype_type.phenotype_type == 'Affection Status':
+            try:
+                phenotype_value = pe.binary[phenotype_value]
+            except KeyError:
+                keys = ', '.join(pe.binary.keys())
+                messages.error(request, f'binary values must be one of: ({keys})')
+                return
+
+            # Check if the phenotype already exists - this is only relevant really
+            # to the instance in which import_data_type == "add_phenotype_values", but in the
+            # case of import_data_type == "individuals" the following if will never be true
+            # (as the individual has been added)
+            if AffectionStatusPhenotypeValue.objects.filter(phenotype=pheno, individual=individual).exists():
+                affectVal = AffectionStatusPhenotypeValue.objects.get(phenotype=pheno, individual=individual)
+                affectVal.phenotype_value = phenotype_value
+            else:
+                affectVal = AffectionStatusPhenotypeValue()
+                affectVal.phenotype = pheno
+                affectVal.individual = individual
+                affectVal.phenotype_value = phenotype_value
+                affectVal.date_created = datetime.datetime.utcnow().replace(tzinfo=utc)
+                affectVal.last_updated = datetime.datetime.utcnow().replace(tzinfo=utc)
+            try:
+                affectVal.save()
+            except:
+                messages.error(request, f'failed to save {pheno.phenotype_name} for {individual_identifier.individual_string}')
+
+        elif pheno.phenotype_type.phenotype_type == "Qualitative":
+
+            # Encode sex
+            if pheno.phenotype_name == 'Sex':
+                try:
+                    phenotype_value = pe.sex[phenotype_value]
+                except KeyError:
+                    keys = ', '.join(pe.sex.keys())
+                    messages.error(request, f'sex values must be one of: ({keys})')
+                    return
+
+            # Check if the phenotype already exists - this is only relevant really
+            # to the instance in which import_data_type == "add_phenotype_values", but in the
+            # case of import_data_type == "individuals" the following if will never be true
+            # (as the individual has been added)
+            if QualitativePhenotypeValue.objects.filter(phenotype=pheno, individual=individual).exists():
+                qualVal = QualitativePhenotypeValue.objects.get(phenotype=pheno, individual=individual)
+                qualVal.phenotype_value = phenotype_value
+            else:
+                qualVal = QualitativePhenotypeValue()
+                qualVal.phenotype = pheno
+                qualVal.individual = individual
+                qualVal.phenotype_value = phenotype_value
+                qualVal.date_created = datetime.datetime.utcnow().replace(tzinfo=utc)
+                qualVal.last_updated = datetime.datetime.utcnow().replace(tzinfo=utc)                        
+            try:
+                qualVal.save()
+            except:
+                messages.error(request, f'failed to save {pheno.phenotype_name} for {individual_identifier.individual_string}')
+
+        elif pheno.phenotype_type.phenotype_type == 'Quantitative':
+            if phenotype_value.isdigit():
+                phenotype_value = Decimal(phenotype_value)
+            else:
+                return
+
+            # Check if the phenotype already exists - this is only relevant really
+            # to the instance in which import_data_type == "add_phenotype_values", but in the
+            # case of import_data_type == "individuals" the following if will never be true
+            # (as the individual has been added)
+            if QuantitiatvePhenotypeValue.objects.filter(phenotype=pheno, individual=individual).exists():
+                quantVal = QuantitiatvePhenotypeValue.objects.get(phenotype=pheno, individual=individual)
+                quantVal.phenotype_value = phenotype_value
+            else:
+                quantVal = QuantitiatvePhenotypeValue()
+                quantVal.phenotype = pheno
+                quantVal.individual = individual
+                quantVal.phenotype_value = phenotype_value
+                quantVal.date_created = datetime.datetime.utcnow().replace(tzinfo=utc)
+                quantVal.last_updated = datetime.datetime.utcnow().replace(tzinfo=utc)
+            try:
+                quantVal.save()
+            except:
+                messages.error(request, f'failed to save {pheno.phenotype_name} for {individual_identifier.individual_string}')
+        else:
+            messages.error(request, f'unrecognised phenotype type {pheno.phenotype_type.phenotype_type}')
+
+
 
 class PlatformAdmin(admin.ModelAdmin):
     list_display = ('platform_name', 'platform_type', 'platform_description')
