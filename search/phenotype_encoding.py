@@ -1,13 +1,15 @@
 sex = {
-    '0'     : 'Unknown',
+    '0'      : 'Unknown',
+    'unknown': 'Unknown',
+    'other'  : 'Unknown',
     
-    '1'     : 'Male',
-    'm'     : 'Male',
-    'male'  : 'Male',
+    '1'      : 'Male',
+    'm'      : 'Male',
+    'male'   : 'Male',
     
-    '2'     : 'Female',
-    'f'     : 'Female',
-    'female': 'Female',
+    '2'      : 'Female',
+    'f'      : 'Female',
+    'female' : 'Female',
 }
 
 binary = {
