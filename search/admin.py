@@ -1,22 +1,20 @@
 from django import forms
-from .models import *
-from django.contrib import admin
-import datetime
+from django.core.exceptions import ObjectDoesNotExist
 from django.utils import timezone
+from django.contrib import admin, messages
+from django.db import connections, IntegrityError, DatabaseError
+from .models import *
+import datetime
 import csv
-from django.db import connections
 from decimal import *
-from django.db import IntegrityError, DatabaseError
-from django.contrib import messages
 from io import TextIOWrapper
 from . import phenotype_encoding as pe
-
 
 def read_csv(csvFile, delimiter):
     # pdb.set_trace()
     f = TextIOWrapper(csvFile.file, encoding='UTF-8')
-    if delimiter == 'tab':
-        reader = csv.DictReader(f, delimiter)
+    if delimiter in ['tab', '\t']:
+        reader = csv.DictReader(f, delimiter='\t')
     else:
         reader = csv.DictReader(f)
     for row in reader:
@@ -108,7 +106,7 @@ class BulkUploadAdmin(admin.ModelAdmin):
         import_data_type = request.POST["import_data_type"]
         file_delimiter = request.POST["file_delimiter"]
         
-        if import_data_type == "study_samples":                
+        if import_data_type == "study_samples":
             
             study = Study.objects.get(id=request.POST["study_id"])
             
@@ -117,7 +115,7 @@ class BulkUploadAdmin(admin.ModelAdmin):
             
             for line in request.FILES["file_to_import"]:
                 
-                sample_total += 1                
+                sample_total += 1 
                 sample_id = line.strip()
                 
                 if Sample.objects.filter(sample_id=sample_id).count() > 0:
@@ -259,7 +257,7 @@ class BulkUploadAdmin(admin.ModelAdmin):
             return
             
         elif import_data_type == "individuals":
-            
+            # import pdb; pdb.set_trace()
             records = read_csv(request.FILES["file_to_import"], file_delimiter)
             
             for line in records:
@@ -274,7 +272,7 @@ class BulkUploadAdmin(admin.ModelAdmin):
                 try:
                     source = Source.objects.get(source_name=centre)
                 except Source.DoesNotExist:
-                    messages.error(request, u"Can't find source in database '" + centre + u"'")
+                    messages.error(request, f'Can\'t find source in database {centre}')
                     continue
                                
                 ## check if the id has already been entered for the given source
@@ -357,27 +355,26 @@ class BulkUploadAdmin(admin.ModelAdmin):
                     self.saveUpdatePhenotype(phenotype_value=line[col],
                         phenotype_name=col,
                         individual=ind,
-                        individual_identifier=indId
-                        )
+                        individual_identifier=indId,
+                        request=request)
             return
             
         elif import_data_type == "phenotypes":
-            
+            # import pdb; pdb.set_trace()
             records = read_csv(request.FILES["file_to_import"], file_delimiter)
             
             for line in records:
                 try:
                     name = line['name']
                     type = line['type']
-                    description = line['description']                    
+                    description = line['description']
                 except KeyError:
-                    messages.error(request, u"Input file is missing required column(s) 'name type description'")
-                    return    
-                
+                    messages.error(request, "Input file is missing required column(s) 'name type description'")
+                    return
                 try:
                     phenoType = PhenotypeType.objects.get(phenotype_type=type)
                 except PhenotypeType.DoesNotExist:
-                    messages.error(request, u"Phenotype Type " + type + u" was NOT found in phenodb for " + name)
+                    messages.error(request, f"Phenotype Type {type} was NOT found in phenodb for {name}")
                     continue
                          
                 pheno = Phenotype()
@@ -622,7 +619,8 @@ class BulkUploadAdmin(admin.ModelAdmin):
                     self.saveUpdatePhenotype(phenotype_value=line[col],
                         phenotype_name=col,
                         individual=ind,
-                        individual_identifier=sampleIndId)
+                        individual_identifier=sampleIndId,
+                        request=request)
             return
         
         elif import_data_type == "add_sample_feature_values":
@@ -673,7 +671,7 @@ class BulkUploadAdmin(admin.ModelAdmin):
                         continue
             return
 
-    def saveUpdatePhenotype(self, phenotype_value, phenotype_name, individual, individual_identifier):
+    def saveUpdatePhenotype(self, phenotype_value, phenotype_name, individual, individual_identifier, request):
         """
             This function creates/updates phenotypes and is called when import type
             is both `add_phenotype_values` and `individuals`.
@@ -683,7 +681,7 @@ class BulkUploadAdmin(admin.ModelAdmin):
 
         try:
             pheno = Phenotype.objects.get(phenotype_name=phenotype_name)
-        except Phenotype.DoesNotExist:
+        except ObjectDoesNotExist:
             messages.error(request, f"Warning Can't find phenotype '{phenotype_name}' in database")
             return
 
