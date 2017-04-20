@@ -5,6 +5,7 @@
 <head>  
   <link rel="stylesheet" type="text/css" href="{% static "css/bootstrap.css" %}" />
   <link rel="stylesheet" type="text/css" href="{% static "css/bootstrap-responsive.css" %}" />
+  <link rel="stylesheet" type="text/css" href="{% static "css/style.css" %}" />
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}PhenoDB{% endblock %}</title>
@@ -38,7 +39,7 @@
             <li><a href="/qcs">QCs</a></li>
             <li><a href="/missing">Missing Samples</a></li>
             <li class="nav-header">Reports</li>
-            <li><a href="/conflictingSampleIDs">Conflicting Sample IDs</a></li>
+            <li><a href="/duplicateSampleIDs">Duplicate Sample IDs</a></li>
           </ul> 
         </div>
       </div>

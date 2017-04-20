@@ -24,5 +24,6 @@ urlpatterns = [
     url(r'^individuals/data$', views.getIndividualData, name='getIndividualData'),
     url(r'^samples/$', views.showSamples, name='showSamples'),
     url(r'^samples/data$', views.getSampleData, name='getSampleData'),
-    url(r'^conflictingSampleIDs/$', views.conflictingSampleIDs, name='conflictingSampleIDs'),
+    url(r'^duplicateSampleIDs/$', views.duplicateSampleIDs, name='duplicateSampleIDs'),
+    # url(r'^conflictingSampleIDs/$', views.conflictingSampleIDs, name='conflictingSampleIDs'),
 ]

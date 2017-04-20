@@ -1,0 +1,7 @@
+tbody:nth-child(odd) { background: #ffffff; }
+tbody:nth-child(even) { background: #e5e5e5; }
+
+
+.table tbody + tbody {
+    border: 2px solid #000000;
+}

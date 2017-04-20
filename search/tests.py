@@ -75,7 +75,6 @@ sources = [{
 individuals = '''\
 centre,centre_id,Sex,Year of birth,IBD affection status,Disease type,Unrelated control,Race,Smoking status,Year of diagnosis
 PLACE1,20,1,,Affected,Ulcerative Colitis,0,White,No,
-TEST,58,2,,Affected,Ulcerative Colitis,0,White,No,
 PLACE1,84,Male,,Affected,Ulcerative Colitis,0,White,Ex-smoker,
 PLACE1,133,Female,,Affected,Ulcerative Colitis,0,White,Yes,
 PLACE1,166,MALE,,Affected,Ulcerative Colitis,0,White,No,
@@ -93,7 +92,6 @@ DORKNEY,DM02_0748,UNKNOWN,1946,Affected,Ulcerative Colitis,0,Other,No,1952
 individuals_expected = '''\
 centre,centre_id,Sex,Year of birth,IBD affection status,Disease type,Unrelated control,Race,Smoking status,Year of diagnosis
 PLACE1,20,Male,,1,ulcerative colitis,0,white,no,
-TEST,58,Female,,1,ulcerative colitis,0,white,no,
 PLACE1,84,Male,,1,ulcerative colitis,0,white,ex-smoker,
 PLACE1,133,Female,,1,ulcerative colitis,0,white,yes,
 PLACE1,166,Male,,1,ulcerative colitis,0,white,no,
@@ -109,20 +107,11 @@ DORKNEY,DM02_0748,Unknown,1946,1,ulcerative colitis,0,other,no,1952
 '''
 
 class Tests(TestCase):
-    # fixtures = ['phenodb.json']
 
     @classmethod
     def setUpTestData(cls):
         for phenotypetype in ['Quantitative', 'Qualitative', 'Affection Status']:
             PhenotypeType.objects.create(phenotype_type=phenotypetype)
-
-    #     for source_name in ['DORKNEY', 'PLACE1']:
-    #         Source.objects.create(
-    #             source_name=source_name,
-    #             contact_name='Some contact',
-    #             source_description='Some description.')
-
-
 
     def setUp(self):
         settings.MIGRATION_MODULES = {

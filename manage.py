@@ -7,10 +7,6 @@ if __name__ == "__main__":
 
     if 'test' in sys.argv:
         from django.conf import settings
-        import logging
-        logging.disable(logging.CRITICAL)
-        settings.DEBUG = False
-        settings.TEMPLATE_DEBUG = False
         settings.PASSWORD_HASHERS = [
             'django.contrib.auth.hashers.MD5PasswordHasher',
         ]
