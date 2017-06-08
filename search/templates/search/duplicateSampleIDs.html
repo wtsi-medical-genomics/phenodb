@@ -1,0 +1,34 @@
+{% extends "search/base.html" %}
+
+{% block content %} 
+    <p class="lead warning">
+        {{warning|safe}}
+    </p>
+    
+    <table class="table duplicates">
+    <thead>
+        <tr>
+            <th>PhenoDB ID</th>
+            <th>Date Created</th>
+            <th>Source:Identifiers</th>
+            <th>Sample IDs</th>
+        </tr>
+    </thead>
+        {% for v in duplicate_samples.values %}
+            <tbody style="border: 2px solid #000000;">
+            {% for individual in v %}
+                <tr>
+                    <td>{{individual.phenodbid}}</td>
+                    <td>{{individual.date|date:"d/m/Y H:i:s"}}</td>
+                    <td>
+                        {% for source, identifiers in individual.individual_identifier_sources.items %}
+                            <span class="sourcename">{{source}}</span>:&nbsp;{{identifiers}}<br>
+                        {% endfor %}
+                    </td>
+                    <td>{{individual.sample_ids}}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        {% endfor %}
+    </table>
+{% endblock %}

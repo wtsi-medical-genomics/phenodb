@@ -1,7 +1,20 @@
 tbody:nth-child(odd) { background: #ffffff; }
 tbody:nth-child(even) { background: #e5e5e5; }
 
-
 .table tbody + tbody {
     border: 2px solid #000000;
+}
+
+.duplicates th {
+    white-space: nowrap;
+}
+
+.warning {
+    margin-top: 10px;
+    margin-bottom: 10px;
+    color: red;
+}
+
+.sourcename {
+    color: darkblue;
 }
