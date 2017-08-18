@@ -47,7 +47,7 @@
 					}
 
 					$("#where_" + idnum).attr('disabled', false);
-					var url = "/search/querybuilder/" + $(this).val() + "/all_json_models";
+					var url = "/querybuilder/" + $(this).val() + "/all_json_models";
 					var from = $(this).val();
 					$.getJSON(url, function(where) {
 						var options = '<option value="message">Select a filter</option>';
@@ -70,7 +70,7 @@
 					$("#is_" + idnum).attr('disabled', true);
 				} else {
 					$("#is_" + idnum).attr('disabled', false);
-					var url = "/search/querybuilder/" + $("#from_" + idnum).val() + "/" + $(this).val() + "/all_search_options";
+					var url = "/querybuilder/" + $("#from_" + idnum).val() + "/" + $(this).val() + "/all_search_options";
 					$.getJSON(url, function(data) {
 						var options = '<option value="message">Select a filter</option>';
 						for (var i = 0; i < data.length; i++) {
@@ -132,7 +132,7 @@
 				$("#querystr_" + idnum).prop('disabled', true);
 			} else {
 				$("#where_" + idnum).attr('disabled', false);
-				var url = "/search/querybuilder/" + $(this).val() + "/all_json_models";
+				var url = "/querybuilder/" + $(this).val() + "/all_json_models";
 				var from = $(this).val();
 				if ($("#from_" + idnum).val() == 'source' | $("#from_" + idnum).val() == 'study' | $("#from_" + idnum).val() == 'platform') {
 					$("#is_" + idnum).prop('value', '');
@@ -161,7 +161,7 @@
 				$("#is_" + idnum).attr('disabled', true);
 			} else {
 				$("#is_" + idnum).attr('disabled', false);
-				var url = "/search/querybuilder/" + $("#from_" + idnum).val() + "/" + $(this).val() + "/all_search_options";
+				var url = "/querybuilder/" + $("#from_" + idnum).val() + "/" + $(this).val() + "/all_search_options";
 				$.getJSON(url, function(data) {
 					var options = '<option value="message">Select a filter</option>';
 					for (var i = 0; i < data.length; i++) {
