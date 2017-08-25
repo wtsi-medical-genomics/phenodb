@@ -28,35 +28,35 @@ def write(filename, listofdicts, keys, sep='\t'):
 
 phenotype_values = [{
     "name": "Sex",
-    "type": "Qualitative",
+    "type": "qualitative",
     "description": "Values: 'Male', 'Female', 'M', 'F', '1', '2', 'Unknown', '0'",
 }, {
     "name": "Year of birth",
-    "type": "Quantitative",
+    "type": "quantitative",
     "description": "Range: 1900 or greater",
 }, {
     "name": "IBD affection status",
-    "type": "Affection Status",
+    "type": "binary",
     "description": "Values: 'Unaffected', 'Affected'",
 }, {
     "name": "Disease type",
-    "type": "Qualitative",
+    "type": "qualitative",
     "description": "Required if affection equals 'Affected'; otherwise must be left blank; Values: 'Crohn's Disease', 'Ulcerative Colitis', 'Indeterminate', 'Unknown'",
 }, {
     "name": "Unrelated control",
-    "type": "Affection Status",
+    "type": "binary",
     "description": "Indicator for unrelated, healthy controls (1 for controls, 0 otherwise); Those designated as controls should have no family history of IBD.",
 }, {
     "name": "Race",
-    "type": "Qualitative",
+    "type": "qualitative",
     "description": "Values:'American Indian/Alaskan Native', 'Asian', 'Black/African American', 'Native Hawaiian/Pacific Islander', 'Other', 'Unknown', 'White'",
 }, {
     "name": "Smoking status",
-    "type": "Qualitative",
+    "type": "qualitative",
     "description": "Smoking status at diagnosis/ascertainment (i.e., within the three months immediately prior); For affected subjects this field represents smoking status at diagnosis of IBD, whereas for unaffected subjects it represents smoking status at time of ascertainment. Note that the possible values differ in these two cases; Values Affected subjects: 'Yes', 'Ex-smoker', 'No', 'Unknown'; Unaffected subjects: 'Current smoker','Ex-smoker','Non-smoker','Unknown'",
 }, {
     "name": "Year of diagnosis",
-    "type": "Quantitative",
+    "type": "quantitative",
     "description": "Range: 1900 or greater",
 }]
 
@@ -110,7 +110,7 @@ class Tests(TestCase):
 
     @classmethod
     def setUpTestData(cls):
-        for phenotypetype in ['Quantitative', 'Qualitative', 'Affection Status']:
+        for phenotypetype in ['quantitative', 'qualitative', 'binary']:
             PhenotypeType.objects.create(phenotype_type=phenotypetype)
 
     def setUp(self):
@@ -205,7 +205,7 @@ class Tests(TestCase):
             self.assertEqual(phenodb_value.phenotype_description, phenotype_value['description'])
             self.assertEqual(phenodb_value.phenotype_type.phenotype_type, phenotype_value['type'])
 
-        for t in ['Affection Status', 'Qualitative', 'Quantitative']:
+        for t in ['binary', 'qualitative', 'quantitative']:
             self.assertEqual(Phenotype.objects.filter(phenotype_type__phenotype_type=t).count(), types[t])
 
 
@@ -222,7 +222,7 @@ class Tests(TestCase):
     #     self.assertEqual(IndividualIdentifier.objects.get(individual = inds[0]).source.source_name, "PLACE1")
     #     self.assertEqual(PhenodbIdentifier.objects.get(individual = inds[0]).phenodb_id, "pdb1")
           
-    #     self.assertEqual(AffectionStatusPhenotypeValue.objects.filter(individual=inds[0]).count(), 9)
+    #     self.assertEqual(BinaryPhenotypeValue.objects.filter(individual=inds[0]).count(), 9)
         
         # Sex
         all_sex = QualitativePhenotypeValue.objects.filter(
@@ -264,12 +264,12 @@ class Tests(TestCase):
                 filtered_phenotype = list(filter(lambda d: d['name'] == k, phenotype_values))
                 phenotypetype = filtered_phenotype[0]['type']
                 # phenotype_type = PhenotypeType.objects.get(phenotype_type=phenotype_type)
-                if phenotypetype == 'Affection Status':
-                    table = AffectionStatusPhenotypeValue
+                if phenotypetype == 'binary':
+                    table = BinaryPhenotypeValue
                     v = int(v)
-                if phenotypetype == 'Qualitative':
+                if phenotypetype == 'qualitative':
                     table = QualitativePhenotypeValue
-                if phenotypetype == 'Quantitative':
+                if phenotypetype == 'quantitative':
                     table = QuantitiatvePhenotypeValue
                     v = int(v)
                 # print(k, i['centre_id'], i['centre'])
@@ -282,15 +282,15 @@ class Tests(TestCase):
 
 
     #     self.assertEqual(QuantitiatvePhenotypeValue.objects.filter(individual=inds[0]).count(), 1)
-    #     self.assertEqual(AffectionStatusPhenotypeValue.objects.get(individual=inds[0],phenotype__phenotype_name="IBD affection status").phenotype_value, 1)
-    #     self.assertEqual(AffectionStatusPhenotypeValue.objects.get(individual=inds[0],phenotype__phenotype_name="Unrelated control").phenotype_value, 0)
-    #     self.assertEqual(AffectionStatusPhenotypeValue.objects.get(individual=inds[0],phenotype__phenotype_name="UC_Proctitis").phenotype_value, 0)
-    #     self.assertEqual(AffectionStatusPhenotypeValue.objects.get(individual=inds[0],phenotype__phenotype_name="UC_Left-sided").phenotype_value, 0)
-    #     self.assertEqual(AffectionStatusPhenotypeValue.objects.get(individual=inds[0],phenotype__phenotype_name="UC_Extensive").phenotype_value, 1)
-    #     self.assertEqual(AffectionStatusPhenotypeValue.objects.get(individual=inds[0],phenotype__phenotype_name="UC_Colectomy").phenotype_value, 1)
-    #     self.assertEqual(AffectionStatusPhenotypeValue.objects.get(individual=inds[0],phenotype__phenotype_name="UC_dysplasia/cancer").phenotype_value, 1)
-    #     self.assertEqual(AffectionStatusPhenotypeValue.objects.get(individual=inds[0],phenotype__phenotype_name="UC_Chronic continuous").phenotype_value, 0)
-    #     self.assertEqual(AffectionStatusPhenotypeValue.objects.get(individual=inds[0],phenotype__phenotype_name="UC_acute fulminant").phenotype_value, 0)
+    #     self.assertEqual(BinaryPhenotypeValue.objects.get(individual=inds[0],phenotype__phenotype_name="IBD affection status").phenotype_value, 1)
+    #     self.assertEqual(BinaryPhenotypeValue.objects.get(individual=inds[0],phenotype__phenotype_name="Unrelated control").phenotype_value, 0)
+    #     self.assertEqual(BinaryPhenotypeValue.objects.get(individual=inds[0],phenotype__phenotype_name="UC_Proctitis").phenotype_value, 0)
+    #     self.assertEqual(BinaryPhenotypeValue.objects.get(individual=inds[0],phenotype__phenotype_name="UC_Left-sided").phenotype_value, 0)
+    #     self.assertEqual(BinaryPhenotypeValue.objects.get(individual=inds[0],phenotype__phenotype_name="UC_Extensive").phenotype_value, 1)
+    #     self.assertEqual(BinaryPhenotypeValue.objects.get(individual=inds[0],phenotype__phenotype_name="UC_Colectomy").phenotype_value, 1)
+    #     self.assertEqual(BinaryPhenotypeValue.objects.get(individual=inds[0],phenotype__phenotype_name="UC_dysplasia/cancer").phenotype_value, 1)
+    #     self.assertEqual(BinaryPhenotypeValue.objects.get(individual=inds[0],phenotype__phenotype_name="UC_Chronic continuous").phenotype_value, 0)
+    #     self.assertEqual(BinaryPhenotypeValue.objects.get(individual=inds[0],phenotype__phenotype_name="UC_acute fulminant").phenotype_value, 0)
     #     self.assertEqual(QualitativePhenotypeValue.objects.get(individual=inds[0],phenotype__phenotype_name="Disease type").phenotype_value, "Ulcerative Colitis")
     #     self.assertEqual(QualitativePhenotypeValue.objects.get(individual=inds[0],phenotype__phenotype_name="Race").phenotype_value, "White")
     #     self.assertEqual(QualitativePhenotypeValue.objects.get(individual=inds[0],phenotype__phenotype_name="Smoking status").phenotype_value, "No")
@@ -303,15 +303,15 @@ class Tests(TestCase):
     #     self.assertEqual(PhenodbIdentifier.objects.get(individual = inds[1]).phenodb_id, "pdb2")
     #     self.assertEqual(IndividualCollection.objects.get(individual = inds[1]).collection.collection_name, "UKIBDGC")
           
-    #     self.assertEqual(AffectionStatusPhenotypeValue.objects.filter(individual=inds[1]).count(), 6)
+    #     self.assertEqual(BinaryPhenotypeValue.objects.filter(individual=inds[1]).count(), 6)
     #     self.assertEqual(QualitativePhenotypeValue.objects.filter(individual=inds[1]).count(), 3)
     #     self.assertEqual(QuantitiatvePhenotypeValue.objects.filter(individual=inds[1]).count(), 1)
-    #     self.assertEqual(AffectionStatusPhenotypeValue.objects.get(individual=inds[1],phenotype__phenotype_name="IBD affection status").phenotype_value, 1)
-    #     self.assertEqual(AffectionStatusPhenotypeValue.objects.get(individual=inds[1],phenotype__phenotype_name="Unrelated control").phenotype_value, 0)
-    #     self.assertEqual(AffectionStatusPhenotypeValue.objects.get(individual=inds[1],phenotype__phenotype_name="UC_Proctitis").phenotype_value, 1)
-    #     self.assertEqual(AffectionStatusPhenotypeValue.objects.get(individual=inds[1],phenotype__phenotype_name="UC_Left-sided").phenotype_value, 0)
-    #     self.assertEqual(AffectionStatusPhenotypeValue.objects.get(individual=inds[1],phenotype__phenotype_name="UC_Extensive").phenotype_value, 0)
-    #     self.assertEqual(AffectionStatusPhenotypeValue.objects.get(individual=inds[1],phenotype__phenotype_name="UC_Colectomy").phenotype_value, 0)        
+    #     self.assertEqual(BinaryPhenotypeValue.objects.get(individual=inds[1],phenotype__phenotype_name="IBD affection status").phenotype_value, 1)
+    #     self.assertEqual(BinaryPhenotypeValue.objects.get(individual=inds[1],phenotype__phenotype_name="Unrelated control").phenotype_value, 0)
+    #     self.assertEqual(BinaryPhenotypeValue.objects.get(individual=inds[1],phenotype__phenotype_name="UC_Proctitis").phenotype_value, 1)
+    #     self.assertEqual(BinaryPhenotypeValue.objects.get(individual=inds[1],phenotype__phenotype_name="UC_Left-sided").phenotype_value, 0)
+    #     self.assertEqual(BinaryPhenotypeValue.objects.get(individual=inds[1],phenotype__phenotype_name="UC_Extensive").phenotype_value, 0)
+    #     self.assertEqual(BinaryPhenotypeValue.objects.get(individual=inds[1],phenotype__phenotype_name="UC_Colectomy").phenotype_value, 0)        
     #     self.assertEqual(QualitativePhenotypeValue.objects.get(individual=inds[1],phenotype__phenotype_name="Disease type").phenotype_value, "Ulcerative Colitis")
     #     self.assertEqual(QualitativePhenotypeValue.objects.get(individual=inds[1],phenotype__phenotype_name="Race").phenotype_value, "White")
     #     self.assertEqual(QualitativePhenotypeValue.objects.get(individual=inds[1],phenotype__phenotype_name="Smoking status").phenotype_value, "Ex-smoker")
@@ -435,7 +435,7 @@ class Tests(TestCase):
 #         phenotype = Phenotype()
 #         phenotype.phenotype_name = "Test"
 #         phenotype.phenotype_description = "Test description" 
-#         phenotype.phenotype_type = PhenotypeType.objects.get(phenotype_type="Quantitative")
+#         phenotype.phenotype_type = PhenotypeType.objects.get(phenotype_type="quantitative")
 #         phenotype.save()
           
 #         ## open test input file
@@ -459,11 +459,11 @@ class Tests(TestCase):
 #         self.assertEqual(QuantitiatvePhenotypeValue.objects.get(phenotype__phenotype_name="Test", individual=ind5).phenotype_value, 0)
           
 #         ## test if existing affection status phenotypes are updated
-#         self.assertEqual(AffectionStatusPhenotypeValue.objects.get(phenotype__phenotype_name="IBD affection status", individual=ind1).phenotype_value, 0)
-#         self.assertEqual(AffectionStatusPhenotypeValue.objects.get(phenotype__phenotype_name="IBD affection status", individual=ind2).phenotype_value, 0)
-#         self.assertEqual(AffectionStatusPhenotypeValue.objects.get(phenotype__phenotype_name="IBD affection status", individual=ind3).phenotype_value, 0)
-#         self.assertEqual(AffectionStatusPhenotypeValue.objects.get(phenotype__phenotype_name="IBD affection status", individual=ind4).phenotype_value, 0)
-#         self.assertEqual(AffectionStatusPhenotypeValue.objects.get(phenotype__phenotype_name="IBD affection status", individual=ind5).phenotype_value, 0)
+#         self.assertEqual(BinaryPhenotypeValue.objects.get(phenotype__phenotype_name="IBD affection status", individual=ind1).phenotype_value, 0)
+#         self.assertEqual(BinaryPhenotypeValue.objects.get(phenotype__phenotype_name="IBD affection status", individual=ind2).phenotype_value, 0)
+#         self.assertEqual(BinaryPhenotypeValue.objects.get(phenotype__phenotype_name="IBD affection status", individual=ind3).phenotype_value, 0)
+#         self.assertEqual(BinaryPhenotypeValue.objects.get(phenotype__phenotype_name="IBD affection status", individual=ind4).phenotype_value, 0)
+#         self.assertEqual(BinaryPhenotypeValue.objects.get(phenotype__phenotype_name="IBD affection status", individual=ind5).phenotype_value, 0)
           
 #         ## test if existing qualitative phenotypes are updated
 #         self.assertEqual(QualitativePhenotypeValue.objects.get(phenotype__phenotype_name="Disease type", individual=ind1).phenotype_value, "test")

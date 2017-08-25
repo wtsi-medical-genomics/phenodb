@@ -18,7 +18,7 @@ from .duplicates import get_duplicate_sampleIDs
 #sys.stdout = sys.stderr
 
 # internal imports
-from .models import IndividualIdentifier, AffectionStatusPhenotypeValue, QualitativePhenotypeValue, QuantitiatvePhenotypeValue, Phenotype, Platform, Individual, Study, Sample, Source, QC, Collection, StudySample, PhenodbIdentifier, MissingSampleID
+from .models import IndividualIdentifier, BinaryPhenotypeValue, QualitativePhenotypeValue, QuantitiatvePhenotypeValue, Phenotype, Platform, Individual, Study, Sample, Source, QC, Collection, StudySample, PhenodbIdentifier, MissingSampleID
 from .tables import PhenotypeTable, PlatformTable, StudyTable, QCTable, SourceTable, CollectionTable, MissingTable, MissingStudyTable, ConflictingSampleIDsTable
 
 def home(request):
@@ -61,21 +61,21 @@ def showPhenotypes(request):
     phenotype_values = []
     for phenotype in phenotypes:
         values_str = ""
-        if phenotype.phenotype_type.phenotype_type == 'Affection Status':
-            values_dict_array = AffectionStatusPhenotypeValue.objects.filter(phenotype_id=phenotype.id).order_by('phenotype_value').values('phenotype_value').distinct()            
+        if phenotype.phenotype_type.phenotype_type == 'binary':
+            values_dict_array = BinaryPhenotypeValue.objects.filter(phenotype_id=phenotype.id).order_by('phenotype_value').values('phenotype_value').distinct()            
             values_list = []
             for value_dict in values_dict_array:
                 values_list.append(str(value_dict['phenotype_value']))
             values_str = ", ".join(values_list)
-            not_null_total = AffectionStatusPhenotypeValue.objects.filter(phenotype_id=phenotype.id, phenotype_value__isnull=False).values('phenotype_value').count()
-        elif phenotype.phenotype_type.phenotype_type == 'Qualitative':
+            not_null_total = BinaryPhenotypeValue.objects.filter(phenotype_id=phenotype.id, phenotype_value__isnull=False).values('phenotype_value').count()
+        elif phenotype.phenotype_type.phenotype_type == 'qualitative':
             values_dict_array = QualitativePhenotypeValue.objects.filter(phenotype_id=phenotype.id).values('phenotype_value').distinct()
             values_list = []
             for value_dict in values_dict_array:
                 values_list.append(str(value_dict['phenotype_value']))
             values_str = ", ".join(values_list)
             not_null_total = QualitativePhenotypeValue.objects.filter(phenotype_id=phenotype.id, phenotype_value__isnull=False).values('phenotype_value').count()
-        elif phenotype.phenotype_type.phenotype_type == 'Quantitative':
+        elif phenotype.phenotype_type.phenotype_type == 'quantitative':
             values_dict_array = QuantitiatvePhenotypeValue.objects.filter(phenotype_id=phenotype.id).order_by('phenotype_value').values('phenotype_value').distinct()
             values_list = []
             for value_dict in values_dict_array:
@@ -143,21 +143,21 @@ def getPhenotypePlotData(request, phenotype_id):
     phenotype_value_counts = []
     phenotype = Phenotype.objects.get(id=phenotype_id)
     
-    if phenotype.phenotype_type.phenotype_type == 'Affection Status':
-        values_dict_array = AffectionStatusPhenotypeValue.objects.filter(phenotype_id=phenotype.id).order_by('phenotype_value').values('phenotype_value').distinct()                    
+    if phenotype.phenotype_type.phenotype_type == 'binary':
+        values_dict_array = BinaryPhenotypeValue.objects.filter(phenotype_id=phenotype.id).order_by('phenotype_value').values('phenotype_value').distinct()                    
         for value_dict in values_dict_array:
             phenotype_value = str(value_dict['phenotype_value'])
-            phenotype_value_count = AffectionStatusPhenotypeValue.objects.filter(phenotype_id=phenotype.id, phenotype_value=phenotype_value).count()
+            phenotype_value_count = BinaryPhenotypeValue.objects.filter(phenotype_id=phenotype.id, phenotype_value=phenotype_value).count()
             phenotype_value_counts.append({'value': phenotype_value, 'count': phenotype_value_count})
 
-    elif phenotype.phenotype_type.phenotype_type == 'Qualitative':
+    elif phenotype.phenotype_type.phenotype_type == 'qualitative':
         values_dict_array = QualitativePhenotypeValue.objects.filter(phenotype_id=phenotype.id).values('phenotype_value').distinct()
         for value_dict in values_dict_array:
             phenotype_value = str(value_dict['phenotype_value'])
             phenotype_value_count = QualitativePhenotypeValue.objects.filter(phenotype_id=phenotype.id, phenotype_value=phenotype_value).count()
             phenotype_value_counts.append({'value': phenotype_value, 'count': phenotype_value_count})
             
-    elif phenotype.phenotype_type.phenotype_type == 'Quantitative':
+    elif phenotype.phenotype_type.phenotype_type == 'quantitative':
         values_dict_array = QuantitiatvePhenotypeValue.objects.filter(phenotype_id=phenotype.id).order_by('phenotype_value').values('phenotype_value').distinct()
         for value_dict in values_dict_array:
             phenotype_value = str(value_dict['phenotype_value'])
@@ -198,11 +198,11 @@ def all_search_options(request, menuid, menuval):
     menuitems = []    
     if menuid == 'phenotype':
         phenotype = Phenotype.objects.get(id=menuval)
-        if phenotype.phenotype_type.phenotype_type == 'Affection Status':
+        if phenotype.phenotype_type.phenotype_type == 'binary':
             menuitems = [{"value": "true", "text": "True" },{"value": "false", "text": "False"},{"value": "isnull", "text": "Is NULL"},{"value": "notnull", "text": "Is not NULL"}]
-        elif phenotype.phenotype_type.phenotype_type == 'Qualitative':        
+        elif phenotype.phenotype_type.phenotype_type == 'qualitative':        
             menuitems = [{"value": "eq", "text": "Equals" },{"value": "contains", "text": "Contains" },{"value": "starts_with", "text": "Starts with" },{"value": "ends_with", "text": "Ends with" },{"value": "isnull", "text": "Is NULL"},{"value": "notnull", "text": "Is not NULL"}]        
-        elif phenotype.phenotype_type.phenotype_type == 'Quantitative':        
+        elif phenotype.phenotype_type.phenotype_type == 'quantitative':        
             menuitems = [{"value": "eq", "text": "==" },{"value": "gt", "text": ">" },{"value": "gte", "text": ">=" },{"value": "lt", "text": "<" },{"value": "lte", "text": "<=" },{"value": "isnull", "text": "Is NULL"},{"value": "notnull", "text": "Is not NULL"}]
     else:
         menuitems = [{"value": "true", "text": "True" },{"value": "false", "text": "False"}]
@@ -447,17 +447,17 @@ def query_db(table, where, where_is, querystr, last_query, andor):
     
     if table == 'phenotype':
         phenotype = Phenotype.objects.get(id=where)            
-        if phenotype.phenotype_type.phenotype_type == 'Affection Status':
+        if phenotype.phenotype_type.phenotype_type == 'binary':
             if where_is == 'true':
-                result_set =  AffectionStatusPhenotypeValue.objects.filter(phenotype__exact=phenotype.id, phenotype_value__exact=1).values_list('individual_id')
+                result_set =  BinaryPhenotypeValue.objects.filter(phenotype__exact=phenotype.id, phenotype_value__exact=1).values_list('individual_id')
             elif where_is == 'false':
-                result_set =  AffectionStatusPhenotypeValue.objects.filter(phenotype__exact=phenotype.id, phenotype_value__exact=0).values_list('individual_id')
+                result_set =  BinaryPhenotypeValue.objects.filter(phenotype__exact=phenotype.id, phenotype_value__exact=0).values_list('individual_id')
             elif where_is == 'notnull':
-                result_set = AffectionStatusPhenotypeValue.objects.filter(phenotype__exact=phenotype.id, phenotype_value__isnull=False).values_list('individual_id')
+                result_set = BinaryPhenotypeValue.objects.filter(phenotype__exact=phenotype.id, phenotype_value__isnull=False).values_list('individual_id')
             elif where_is == 'isnull':
-                result_set = AffectionStatusPhenotypeValue.objects.filter(phenotype__exact=phenotype.id, phenotype_value__isnull=True).values_list('individual_id')
+                result_set = BinaryPhenotypeValue.objects.filter(phenotype__exact=phenotype.id, phenotype_value__isnull=True).values_list('individual_id')
                         
-        elif phenotype.phenotype_type.phenotype_type == 'Qualitative':
+        elif phenotype.phenotype_type.phenotype_type == 'qualitative':
             if where_is == 'eq':
                 result_set = QualitativePhenotypeValue.objects.filter(phenotype__exact=phenotype.id, phenotype_value__iexact=querystr).values_list('individual_id')
             elif where_is == 'contains':
@@ -471,7 +471,7 @@ def query_db(table, where, where_is, querystr, last_query, andor):
             elif where_is == 'notnull':
                 result_set = QualitativePhenotypeValue.objects.filter(phenotype__exact=phenotype.id, phenotype_value__isnull=False).values_list('individual_id')
                                                             
-        elif phenotype.phenotype_type.phenotype_type == 'Quantitative':
+        elif phenotype.phenotype_type.phenotype_type == 'quantitative':
             if where_is == 'eq':
                 result_set = QuantitiatvePhenotypeValue.objects.filter(phenotype__exact=phenotype.id, phenotype_value__iexact=querystr).values_list('individual_id')
             elif where_is == 'gt':
@@ -590,19 +590,19 @@ def get_output_data(page_results, output_columns):
                 phenotype_id = column.split(":")[1] 
                 phenotype = Phenotype.objects.get(id=phenotype_id)            
                 
-                if phenotype.phenotype_type.phenotype_type == 'Affection Status':                    
+                if phenotype.phenotype_type.phenotype_type == 'binary':                    
                     try:
-                        affectionstatus = AffectionStatusPhenotypeValue.objects.get(phenotype__exact=phenotype.id, individual_id=ind_id)
-                        value = str(affectionstatus.phenotype_value)
-                    except AffectionStatusPhenotypeValue.DoesNotExist:
+                        binary = BinaryPhenotypeValue.objects.get(phenotype__exact=phenotype.id, individual_id=ind_id)
+                        value = str(binary.phenotype_value)
+                    except BinaryPhenotypeValue.DoesNotExist:
                         value = "-"                                
-                elif phenotype.phenotype_type.phenotype_type == 'Qualitative':            
+                elif phenotype.phenotype_type.phenotype_type == 'qualitative':            
                     try:
                         qualitative = QualitativePhenotypeValue.objects.get(phenotype__exact=phenotype.id, individual_id=ind_id)
                         value = str(qualitative.phenotype_value)
                     except QualitativePhenotypeValue.DoesNotExist:
                         value = "-"            
-                elif phenotype.phenotype_type.phenotype_type == 'Quantitative':
+                elif phenotype.phenotype_type.phenotype_type == 'quantitative':
                     try:
                         quantitiatve = QuantitiatvePhenotypeValue.objects.get(phenotype__exact=phenotype.id, individual_id=ind_id)
                         value = str(quantitiatve.phenotype_value)
@@ -665,7 +665,7 @@ def perform_queries(request, tables, wheres, where_iss, querystrs, andors):
         phenotype = Phenotype.objects.get(id=where)
         phenotype_type = phenotype.phenotype_type.phenotype_type
                                             
-        if phenotype_type == 'Affection Status' or where_is == 'isnull' or where_is == 'notnull':
+        if phenotype_type == 'binary' or where_is == 'isnull' or where_is == 'notnull':
             querystr = ''
         else:
             querystr = querystrs.pop().strip()
@@ -695,7 +695,7 @@ def perform_queries(request, tables, wheres, where_iss, querystrs, andors):
             phenotype = Phenotype.objects.get(id=where)
             phenotype_type = phenotype.phenotype_type.phenotype_type
                                             
-            if phenotype_type == 'Affection Status' or where_is == 'isnull' or where_is == 'notnull':
+            if phenotype_type == 'binary' or where_is == 'isnull' or where_is == 'notnull':
                 querystr = ''
             else:
                 querystr = querystrs.pop().strip()

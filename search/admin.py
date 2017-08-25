@@ -33,7 +33,7 @@ class BulkUploadForm(forms.ModelForm):
         ('study_samples', 'Study Samples'),
         ('sample_qc', 'Sample QC'),
         ('add_sample_on_sample', 'Add New SampleID to existing Sample on SampleID'),
-        ('add_phenotype_values', 'Add phenotype values to existing individuals')
+        ('add_phenotype_values', 'Add phenotype values to existing individuals'),
         
 #         ('add_sample_feature_values', 'Add sample feature values')
 #         ('check_samples_in_warehouse', 'Check Samples in Sanger Warehouse'),
@@ -79,7 +79,7 @@ class BulkUploadForm(forms.ModelForm):
     
     <b>Add Phenotype to existing Individual</b><br>
     &nbsp&nbsp&ltcentre&gt &ltcentre_id&gt [any Phenotype name already entered in the Phenotype table]... <br>
-    
+ 
     """
     file_to_import = forms.FileField(help_text = file_format_description)
     
@@ -687,7 +687,7 @@ class BulkUploadAdmin(admin.ModelAdmin):
 
         phenotype_value = phenotype_value.strip().lower()
 
-        if pheno.phenotype_type.phenotype_type == 'Affection Status':
+        if pheno.phenotype_type.phenotype_type == 'binary':
             try:
                 phenotype_value = pe.binary[phenotype_value]
             except KeyError:
@@ -699,11 +699,11 @@ class BulkUploadAdmin(admin.ModelAdmin):
             # to the instance in which import_data_type == "add_phenotype_values", but in the
             # case of import_data_type == "individuals" the following if will never be true
             # (as the individual has been added)
-            if AffectionStatusPhenotypeValue.objects.filter(phenotype=pheno, individual=individual).exists():
-                affectVal = AffectionStatusPhenotypeValue.objects.get(phenotype=pheno, individual=individual)
+            if BinaryPhenotypeValue.objects.filter(phenotype=pheno, individual=individual).exists():
+                affectVal = BinaryPhenotypeValue.objects.get(phenotype=pheno, individual=individual)
                 affectVal.phenotype_value = phenotype_value
             else:
-                affectVal = AffectionStatusPhenotypeValue()
+                affectVal = BinaryPhenotypeValue()
                 affectVal.phenotype = pheno
                 affectVal.individual = individual
                 affectVal.phenotype_value = phenotype_value
@@ -714,7 +714,7 @@ class BulkUploadAdmin(admin.ModelAdmin):
             except:
                 messages.error(request, f'failed to save {pheno.phenotype_name} for {individual_identifier.individual_string}')
 
-        elif pheno.phenotype_type.phenotype_type == "Qualitative":
+        elif pheno.phenotype_type.phenotype_type == "qualitative":
 
             # Encode sex
             if pheno.phenotype_name == 'Sex':
@@ -744,7 +744,7 @@ class BulkUploadAdmin(admin.ModelAdmin):
             except:
                 messages.error(request, f'failed to save {pheno.phenotype_name} for {individual_identifier.individual_string}')
 
-        elif pheno.phenotype_type.phenotype_type == 'Quantitative':
+        elif pheno.phenotype_type.phenotype_type == 'quantitative':
             if phenotype_value.isdigit():
                 phenotype_value = Decimal(phenotype_value)
             else:

@@ -77,7 +77,7 @@
 							options += '<option value="' + data[i].value + '">' + data[i].text + '</option>';
 						}
 						$("#is_" + idnum).html(options);
-						// if data contains just 4 entries then it is an affection status so does not need a text entry field
+						// if data contains just 4 entries then it is a binary phenotype so does not need a text entry field
 						if (data.length > 4) {
 							$("#querystr_" + idnum).prop('disabled', false);
 						} else {
@@ -168,7 +168,7 @@
 						options += '<option value="' + data[i].value + '">' + data[i].text + '</option>';
 					}
 					$("#is_" + idnum).html(options);
-					// if data contains just 4 entries then it is an affection status so does not need a text entry field
+					// if data contains just 4 entries then it is a binary phenotype so does not need a text entry field
 					if (data.length > 4) {
 						$("#querystr_" + idnum).prop('disabled', false);
 					} else {

@@ -58,10 +58,10 @@ class IndividualCollection(models.Model):
     class Meta:
         unique_together = ('individual', 'collection',)
 
-class AffectionStatusPhenotypeValue(models.Model):
+class BinaryPhenotypeValue(models.Model):
     phenotype = models.ForeignKey(Phenotype)
     individual = models.ForeignKey(Individual)
-    phenotype_value = models.SmallIntegerField()
+    phenotype_value = models.BooleanField()
     date_created = models.DateTimeField()
     last_updated = models.DateTimeField()
     # date_measured = models.DateTimeField(null=True)
@@ -73,7 +73,7 @@ class AffectionStatusPhenotypeValue(models.Model):
     
     def __str__(self):
         return str(self.phenotype_value)
-    
+
 class QualitativePhenotypeValue(models.Model):
     phenotype = models.ForeignKey(Phenotype)
     individual = models.ForeignKey(Individual)
@@ -145,10 +145,10 @@ class SampleFeature(models.Model):
     def __str__(self):
         return self.sample_feature_name    
     
-class AffectionStatusSampleFeatureValue(models.Model):
+class BinarySampleFeatureValue(models.Model):
     sample_feature = models.ForeignKey(SampleFeature)
     sample = models.ForeignKey(Sample)
-    sample_feature_value = models.SmallIntegerField()
+    sample_feature_value = models.BooleanField()
     date_created = models.DateTimeField()
     last_updated = models.DateTimeField()
     
