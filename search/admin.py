@@ -457,37 +457,45 @@ class BulkUploadAdmin(admin.ModelAdmin):
             return
             
         elif import_data_type == "samples":
-            
+
             records = read_csv(request.FILES["file_to_import"], file_delimiter)
-            
+
             for line in records:
-                
+                print(line)
                 try:
                     centre = line['centre']
                     centre_id = line['centre_id']
-                    sample_id = line['sample_id']                    
+                    sample_id = line['sample_id']
                 except KeyError:
                     messages.error(request, u"Input file is missing required column(s) 'centre centre_id sample_id'")
                     return     
-                
+
                 try:
                     source = Source.objects.get(source_name=centre)
                 except Source.DoesNotExist:
                     messages.error(request, u"Can't find source in database '" + centre + u"'")
                     continue                
-                
+
                 ## check if the id has already been entered for the given source
                 try:
                     sampleIndId = IndividualIdentifier.objects.get(individual_string=centre_id,source_id=source.id)
                 except IndividualIdentifier.DoesNotExist:
                     messages.error(request, u"Individual " + centre_id + u" NOT found in phenodb")
                     continue
-                
+
                 ## check that a sample has not already been entered for the ind with the same name
                 if Sample.objects.filter(individual=sampleIndId.individual,sample_id=sample_id).count() > 0:
                     messages.error(request, u"Sample ID '" + sample_id + u"' already added for this individual")                
                     continue
-                          
+
+                ## check that a sample doesn't exist at all with the same sample_id
+                n_duplicate_samples = Sample.objects.filter(sample_id=sample_id).count()
+                print(sample_id)
+                print(n_duplicate_samples)
+                if n_duplicate_samples > 0:
+                    messages.error(request, f"Sample ID {sample_id} not added: already exists {n_duplicate_samples} times in Samples table. Merge action required.")
+                    continue
+
                 sample = Sample()
                 sample.individual = sampleIndId.individual
                 sample.sample_id = sample_id

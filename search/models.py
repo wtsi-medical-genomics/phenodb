@@ -121,6 +121,9 @@ class Sample(models.Model):
     date_created = models.DateTimeField()
     last_updated = models.DateTimeField()
 
+    def __str__(self):
+        return self.sample_id
+
 class StudySample(models.Model):
     study = models.ForeignKey(Study)
     sample = models.ForeignKey(Sample)
