@@ -461,7 +461,7 @@ class BulkUploadAdmin(admin.ModelAdmin):
             records = read_csv(request.FILES["file_to_import"], file_delimiter)
 
             for line in records:
-                print(line)
+
                 try:
                     centre = line['centre']
                     centre_id = line['centre_id']
@@ -490,8 +490,7 @@ class BulkUploadAdmin(admin.ModelAdmin):
 
                 ## check that a sample doesn't exist at all with the same sample_id
                 n_duplicate_samples = Sample.objects.filter(sample_id=sample_id).count()
-                print(sample_id)
-                print(n_duplicate_samples)
+
                 if n_duplicate_samples > 0:
                     messages.error(request, f"Sample ID {sample_id} not added: already exists {n_duplicate_samples} times in Samples table. Merge action required.")
                     continue
