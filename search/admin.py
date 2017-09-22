@@ -794,7 +794,7 @@ class SourceAdmin(admin.ModelAdmin):
     
 class QCAdmin(admin.ModelAdmin):
     list_display = ('qc_name', 'qc_description')
-                          
+
 admin.site.register(Platform, PlatformAdmin)
 admin.site.register(PlatformType)
 admin.site.register(PhenotypeType)
@@ -806,4 +806,5 @@ admin.site.register(BulkUpload, BulkUploadAdmin)
 admin.site.register(Collection)
 admin.site.register(SampleFeatureType)
 admin.site.register(SampleFeature)
+admin.site.register(SampleCollection)
 

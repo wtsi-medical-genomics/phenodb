@@ -227,9 +227,7 @@ class BulkUpload(models.Model):
     pass    
 
 class SampleCollection(models.Model):
-    name = models.CharField(max_length=100, unique=True)
-    date_created = models.DateTimeField()
-    last_updated = models.DateTimeField()
+    collection_name = models.CharField(max_length=100, unique=True)
     collection_description = models.TextField()
     
     def __str__(self):
