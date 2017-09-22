@@ -87,7 +87,7 @@ class BulkUploadForm(forms.ModelForm):
         ('comma', 'Comma'),
         ('tab','Tab')
         
-    )    
+    )
     file_delimiter = forms.ChoiceField(delimiter_options, help_text = "Select the delimeter used in the file")
     
     study_id = forms.ModelChoiceField(Study.objects.all(), required=False, help_text = "Only required when adding Study Samples")

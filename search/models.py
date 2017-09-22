@@ -225,3 +225,28 @@ class MissingSampleID(models.Model):
     
 class BulkUpload(models.Model):
     pass    
+
+class SampleCollection(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+    date_created = models.DateTimeField()
+    last_updated = models.DateTimeField()
+    collection_description = models.TextField()
+    
+    def __str__(self):
+        return self.collection_name
+
+class SampleCollectionEntry(models.Model):
+    sample_collection = models.ForeignKey(SampleCollection)
+    sample = models.ForeignKey(Sample)
+    date_created = models.DateTimeField()
+    last_updated = models.DateTimeField()
+
+    # These fields are optional (ie we may not have the data on hand for every sample)
+    id_in_collection = models.CharField(max_length=100, blank=True)
+    source = models.ForeignKey(Source, null=True)
+
+    class Meta:
+        unique_together = ('sample', 'sample_collection',)
+
+    def __str__(self):
+        return self.id_in_collection
