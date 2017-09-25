@@ -9,6 +9,7 @@ import csv
 from decimal import *
 from io import TextIOWrapper
 from . import phenotype_encoding as pe
+import pdb
 
 def read_csv(csvFile, delimiter):
     # pdb.set_trace()
@@ -34,6 +35,7 @@ class BulkUploadForm(forms.ModelForm):
         ('sample_qc', 'Sample QC'),
         ('add_sample_on_sample', 'Add New SampleID to existing Sample on SampleID'),
         ('add_phenotype_values', 'Add phenotype values to existing individuals'),
+        ('add_sample_collection_entries', 'Add entries to a sample collection'),
         
 #         ('add_sample_feature_values', 'Add sample feature values')
 #         ('check_samples_in_warehouse', 'Check Samples in Sanger Warehouse'),
@@ -80,6 +82,9 @@ class BulkUploadForm(forms.ModelForm):
     <b>Add Phenotype to existing Individual</b><br>
     &nbsp&nbsp&ltcentre&gt &ltcentre_id&gt [any Phenotype name already entered in the Phenotype table]... <br>
  
+    <b>Add entries to a sample collection</b><br>
+    &nbsp&nbsp&ltcentre&gt &ltcentre_id&gt <sample_id> [id_in_collection] [source]<br>
+
     """
     file_to_import = forms.FileField(help_text = file_format_description)
     
@@ -92,7 +97,9 @@ class BulkUploadForm(forms.ModelForm):
     
     study_id = forms.ModelChoiceField(Study.objects.all(), required=False, help_text = "Only required when adding Study Samples")
     qc_id = forms.ModelChoiceField(QC.objects.all(), required=False, help_text = "Only required when adding Samples QC values")
+    qc_id2 = forms.ModelChoiceField(QC.objects.all(), required=False, help_text = "Only required when adding Samples QC values")
 
+    sample_collection_id = forms.ModelChoiceField(SampleCollection.objects.all(), required=False, help_text = "Only required when adding samples to a Sample Collection")
     # class Meta:
     #     model = BulkUpload
 
@@ -147,7 +154,7 @@ class BulkUploadAdmin(admin.ModelAdmin):
                 
                 insert_total += 1
             
-            messages.error(request, str(insert_total) + " of " + str(sample_total) + u" samples successfully inserted into the database")
+            messages.error(request, str(insert_total) + " of " + str(sample_total) + " samples successfully inserted into the database")
             return
         
         elif import_data_type == 'remove_ind_dups':
@@ -161,25 +168,25 @@ class BulkUploadAdmin(admin.ModelAdmin):
                     remove_id = line['remove_id'] 
                     centre = line['centre']
                 except KeyError:
-                    messages.error(request, u"Input file is missing required column(s) 'working_id remove_id centre'")
+                    messages.error(request, "Input file is missing required column(s) 'working_id remove_id centre'")
                     return
                 
                 try:
                     source = Source.objects.get(source_name=centre)
                 except Source.DoesNotExist:
-                    messages.error(request, u"Can't find source in database '" + centre + u"'")
+                    messages.error(request, "Can't find source in database '" + centre + "'")
                     continue
                 
                 print(IndividualIdentifier.objects.filter(individual_string=working_id,source_id=source.id).count())
                 
                 ## check that the working ID exists
                 if IndividualIdentifier.objects.filter(individual_string=working_id,source_id=source.id).count() < 1:
-                    messages.error(request, u"Working ID '" + working_id + u"' does not exist in the database")
+                    messages.error(request, "Working ID '" + working_id + "' does not exist in the database")
                     continue
                 
                 ## check that the remove ID exists
                 if IndividualIdentifier.objects.filter(individual_string=remove_id,source_id=source.id).count() < 1:
-                    messages.error(request, u"Remove ID '" + remove_id + u"' does not exist in the database")
+                    messages.error(request, "Remove ID '" + remove_id + "' does not exist in the database")
                     continue
                 
                 ## get the indivdual indentifier object of the working ID
@@ -223,19 +230,19 @@ class BulkUploadAdmin(admin.ModelAdmin):
                     sample_id = line['sample_id']
                     qc_value = line['qc_value']                    
                 except KeyError:
-                    messages.error(request, u"Input file is missing required column(s) 'sample_id qc_value'")
+                    messages.error(request, "Input file is missing required column(s) 'sample_id qc_value'")
                     return     
                 
                 try:
                     sample = Sample.objects.get(sample_id=sample_id)
                 except Sample.DoesNotExist:
-                    messages.error(request, u"Can't find sample in database '" + sample_id + u"'")
+                    messages.error(request, "Can't find sample in database '" + sample_id + "'")
                     continue                                
                 
                 try:
                     study_sample = StudySample.objects.get(sample=sample,study=study)
                 except Sample.DoesNotExist:
-                    messages.error(request, u"Can't find study sample in database '" + sample_id + u"' '" + study.study_name + u"'")
+                    messages.error(request, "Can't find study sample in database '" + sample_id + "' '" + study.study_name + "'")
                     continue
                 
                 
@@ -252,7 +259,7 @@ class BulkUploadAdmin(admin.ModelAdmin):
                 try:
                     sampleQC.save()
                 except IntegrityError as err:
-                    messages.error(request, u"Sample " + sample_id + " and study " + study_id + " is already in the database " + str(err))
+                    messages.error(request, "Sample " + sample_id + " and study " + study_id + " is already in the database " + str(err))
                     continue        
             return
             
@@ -266,7 +273,7 @@ class BulkUploadAdmin(admin.ModelAdmin):
                     centre_id = line['centre_id']
 #                     sample_id = line['sample_id']                    
                 except KeyError:
-                    messages.error(request, u"Input file is missing required column(s) 'centre centre_id'")
+                    messages.error(request, "Input file is missing required column(s) 'centre centre_id'")
                     return     
                 
                 try:
@@ -277,7 +284,7 @@ class BulkUploadAdmin(admin.ModelAdmin):
                                
                 ## check if the id has already been entered for the given source
                 if IndividualIdentifier.objects.filter(individual_string=centre_id,source_id=source.id).count() > 0:
-                    messages.error(request, u"Individual '" + centre_id + u"' already added for this source")
+                    messages.error(request, "Individual '" + centre_id + "' already added for this source")
                     continue
                 
                 ## the individual id from another file might be similar but not exactly the same
@@ -300,7 +307,7 @@ class BulkUploadAdmin(admin.ModelAdmin):
 #                             try:
 #                                 indId.save()
 #                             except IntegrityError:
-#                                 messages.error(request, u"centre_id " + centre_id + " is already in the database")
+#                                 messages.error(request, "centre_id " + centre_id + " is already in the database")
 #                             continue
 #                 except Sample.DoesNotExist:
 #                     pass
@@ -315,7 +322,7 @@ class BulkUploadAdmin(admin.ModelAdmin):
                 ## create the phenodb_id
                 pdbId = PhenodbIdentifier()
                 pdbId.individual = ind
-                pdbId.phenodb_id = u"pdb" + str(ind.pk)
+                pdbId.phenodb_id = "pdb" + str(ind.pk)
                 pdbId.date_created = timezone.now()
                 pdbId.last_updated = timezone.now()
                 pdbId.save()
@@ -324,7 +331,7 @@ class BulkUploadAdmin(admin.ModelAdmin):
                     collection = line['collection']
                     coll = Collection.objects.get(collection_name=collection)
                 except Collection.DoesNotExist:
-                    messages.error(request, u"Can't find collection in database '" + collection + u"'")
+                    messages.error(request, "Can't find collection in database '" + collection + "'")
                     collection = None
                 except KeyError:
                     collection = None
@@ -347,7 +354,7 @@ class BulkUploadAdmin(admin.ModelAdmin):
                 try:
                     indId.save()
                 except IntegrityError:
-                    messages.error(request, u"centre_id " + centre_id + " is already in the database")
+                    messages.error(request, "centre_id " + centre_id + " is already in the database")
                     continue
                                         
                 ## insert phenotype values
@@ -385,9 +392,9 @@ class BulkUploadAdmin(admin.ModelAdmin):
                 try:
                     pheno.save()
                 except IntegrityError:
-                    messages.error(request, u"Phenotype " + line['name'] + " is already in the database")
+                    messages.error(request, "Phenotype " + line['name'] + " is already in the database")
                     continue
-                messages.success(request, u"Phenotype " + line['name'] + u" was added to PhenoDB")
+                messages.success(request, "Phenotype " + line['name'] + " was added to PhenoDB")
             return
         
         elif import_data_type == "sources":
@@ -400,7 +407,7 @@ class BulkUploadAdmin(admin.ModelAdmin):
                     contact = line['contact']
                     description = line['description']                    
                 except KeyError:
-                    messages.error(request, u"Input file is missing required column(s) 'centre contact description'")
+                    messages.error(request, "Input file is missing required column(s) 'centre contact description'")
                     return 
                 
                 source = Source()
@@ -410,9 +417,9 @@ class BulkUploadAdmin(admin.ModelAdmin):
                 try:
                     source.save()
                 except IntegrityError:
-                    messages.error(request, u"Source " + line['centre'] + " is already in the database")
+                    messages.error(request, "Source " + line['centre'] + " is already in the database")
                     continue
-                messages.success(request, u"Source " + line['centre'] + u" was added to PhenoDB")                
+                messages.success(request, "Source " + line['centre'] + " was added to PhenoDB")                
             return
         
         elif import_data_type == 'individual_ids':
@@ -426,20 +433,20 @@ class BulkUploadAdmin(admin.ModelAdmin):
                     centre_id = line['centre_id']
                     new_centre_id = line['new_centre_id']                    
                 except KeyError:
-                    messages.error(request, u"Input file is missing required column(s) 'centre centre_id new_centre_id'")
+                    messages.error(request, "Input file is missing required column(s) 'centre centre_id new_centre_id'")
                     return 
             
                 try:
                     source = Source.objects.get(source_name=centre)
                 except Source.DoesNotExist:
-                    messages.error(request, u"Can't find source in database '" + centre + u"'")
+                    messages.error(request, "Can't find source in database '" + centre + "'")
                     continue
             
                 ## check if the id has already been entered for the given source
                 try:
                     indId = IndividualIdentifier.objects.get(individual_string=centre_id,source_id=source.id)
                 except IndividualIdentifier.DoesNotExist:
-                    messages.error(request, u"Individual " + centre_id + u" NOT found in phenodb")
+                    messages.error(request, "Individual " + centre_id + " NOT found in phenodb")
                     continue
                 
                 ## insert the new individual identifier
@@ -467,25 +474,25 @@ class BulkUploadAdmin(admin.ModelAdmin):
                     centre_id = line['centre_id']
                     sample_id = line['sample_id']
                 except KeyError:
-                    messages.error(request, u"Input file is missing required column(s) 'centre centre_id sample_id'")
+                    messages.error(request, "Input file is missing required column(s) 'centre centre_id sample_id'")
                     return     
 
                 try:
                     source = Source.objects.get(source_name=centre)
                 except Source.DoesNotExist:
-                    messages.error(request, u"Can't find source in database '" + centre + u"'")
+                    messages.error(request, "Can't find source in database '" + centre + "'")
                     continue                
 
                 ## check if the id has already been entered for the given source
                 try:
                     sampleIndId = IndividualIdentifier.objects.get(individual_string=centre_id,source_id=source.id)
                 except IndividualIdentifier.DoesNotExist:
-                    messages.error(request, u"Individual " + centre_id + u" NOT found in phenodb")
+                    messages.error(request, "Individual " + centre_id + " NOT found in phenodb")
                     continue
 
                 ## check that a sample has not already been entered for the ind with the same name
                 if Sample.objects.filter(individual=sampleIndId.individual,sample_id=sample_id).count() > 0:
-                    messages.error(request, u"Sample ID '" + sample_id + u"' already added for this individual")                
+                    messages.error(request, "Sample ID '" + sample_id + "' already added for this individual")                
                     continue
 
                 ## check that a sample doesn't exist at all with the same sample_id
@@ -508,13 +515,13 @@ class BulkUploadAdmin(admin.ModelAdmin):
                     warehouseCursor.execute("SELECT DISTINCT sanger_sample_id, supplier_name, gender FROM current_samples WHERE name = %s ORDER BY checked_at desc", sample.sample_id)
                     row = warehouseCursor.fetchone()
                     if row is None:
-                        messages.error(request, u"Sample " + sample.sample_id + u" NOT found in warehouse")  
+                        messages.error(request, "Sample " + sample.sample_id + " NOT found in warehouse")  
                         continue
                     if row[0] is None:
-                        messages.error(request, u"Sample " + sample.sample_id + u" NOT found in warehouse")
+                        messages.error(request, "Sample " + sample.sample_id + " NOT found in warehouse")
                         continue  
                     if row[1] != sampleIndId.individual_string:
-                        messages.error(request, u"supplier name " + str(sampleIndId.individual_string) + u" does not match warehouse "  + row[1])                        
+                        messages.error(request, "supplier name " + str(sampleIndId.individual_string) + " does not match warehouse "  + row[1])                        
                         
                         ## insert the new individual identifier
                         indId = IndividualIdentifier()
@@ -528,12 +535,12 @@ class BulkUploadAdmin(admin.ModelAdmin):
                         except IntegrityError:
                             pass
                 except DatabaseError:
-                    messages.error(request, u"Can't connect to warehouse database")                    
+                    messages.error(request, "Can't connect to warehouse database")                    
                                                                                                            
                 try:
                     sample.save()
                 except IntegrityError:
-#                   messages.error(request, u"Sample " + sample_id + " is already in the database")
+#                   messages.error(request, "Sample " + sample_id + " is already in the database")
                     continue
                 
                 ## now the sample is inserted check if it was a missing sample
@@ -546,7 +553,7 @@ class BulkUploadAdmin(admin.ModelAdmin):
                         studySample.sample = sample
                         studySample.study = missingSample.study
                         studySample.date_created = timezone.now()
-                        studySample.last_updated = timezone.now()     
+                        studySample.last_updated = timezone.now()
                 
                         try:
                             studySample.save()
@@ -567,7 +574,7 @@ class BulkUploadAdmin(admin.ModelAdmin):
                     sample_id = line['sample_id']     
                     new_sample_id = line['new_sample_id']                                                       
                 except KeyError:
-                    messages.error(request, u"Input file is missing required column(s) 'sample_id','new_sample_id'")
+                    messages.error(request, "Input file is missing required column(s) 'sample_id','new_sample_id'")
                     return
                 
                 if Sample.objects.filter(sample_id=sample_id).count() > 0:                    
@@ -578,12 +585,12 @@ class BulkUploadAdmin(admin.ModelAdmin):
                 try:
                     individual = Individual.objects.get(id=sample.individual.id)
                 except Individual.DoesNotExist:
-#                       messages.error(request, u"Can't find sample in database '" + sample_id + u"'")
+#                       messages.error(request, "Can't find sample in database '" + sample_id + "'")
                     continue 
                 
                     ## check if this sample has already been added for this individual
                 if Sample.objects.filter(sample_id=new_sample_id, individual=individual.id).count() > 0:
-                    messages.error(request, u"sample_id '" + new_sample_id + u"' already added for this individual")
+                    messages.error(request, "sample_id '" + new_sample_id + "' already added for this individual")
                     continue
                 
                 newSample = Sample()
@@ -604,20 +611,20 @@ class BulkUploadAdmin(admin.ModelAdmin):
                     centre = line['centre']
                     centre_id = line['centre_id']                    
                 except KeyError:
-                    messages.error(request, u"Input file is missing required column(s) 'centre centre_id'")
+                    messages.error(request, "Input file is missing required column(s) 'centre centre_id'")
                     return
                 
                 try:
                     source = Source.objects.get(source_name=centre)
                 except Source.DoesNotExist:
-                    messages.error(request, u"Can't find source in database '" + centre + u"'")
+                    messages.error(request, "Can't find source in database '" + centre + "'")
                     continue 
                 
                 ## get the individual
                 try:
                     sampleIndId = IndividualIdentifier.objects.get(individual_string=centre_id,source_id=source.id)
                 except IndividualIdentifier.DoesNotExist:
-                    messages.error(request, u"Individual " + centre_id + u" NOT found in phenodb")
+                    messages.error(request, "Individual " + centre_id + " NOT found in phenodb")
                     continue
                 
                 ind = sampleIndId.individual
@@ -643,7 +650,7 @@ class BulkUploadAdmin(admin.ModelAdmin):
                     sample_id = line['sample_id']
                     sample_feature_value = line['sample_feature_value']                    
                 except KeyError:
-                    messages.error(request, u"Input file is missing required column(s) 'sample_id sample_feature_value'")
+                    messages.error(request, "Input file is missing required column(s) 'sample_id sample_feature_value'")
                     return
                 
                 ## find the sample and give an error if it can't be found
@@ -662,7 +669,7 @@ class BulkUploadAdmin(admin.ModelAdmin):
                 try:
                     sample_id = line['sample_id']                    
                 except KeyError:
-                    messages.error(request, u"Input file is missing required column(s) 'sample_id'")
+                    messages.error(request, "Input file is missing required column(s) 'sample_id'")
                     return     
     
                 if Sample.objects.filter(sample_id=sample_id).exists(): 
@@ -675,6 +682,61 @@ class BulkUploadAdmin(admin.ModelAdmin):
                         continue
                     else:
 #                        out_file.write(str(row) + "\n")
+                        continue
+
+        elif import_data_type == "add_sample_collection_entries":
+            sample_collection_id = request.POST["sample_collection_id"]
+            sample_collection = SampleCollection.objects.get(id=sample_collection_id)
+
+            records = read_csv(request.FILES["file_to_import"], file_delimiter)
+
+            for line in records:
+                try:
+                    sample_id = line['sample_id']
+                except KeyError:
+                    messages.error(request, "Input file is missing required column: sample_id")
+                    continue
+
+                try:
+                    id_in_collection = line['id_in_collection']
+                except KeyError:
+                    id_in_collection = None
+
+                try:
+                    source = line['source']
+                except KeyError:
+                    source = None
+
+                if source:
+                    try:
+                        source = Source.objects.get(source_name=source)
+                    except Source.DoesNotExist:
+                        messages.error(request, f"Can't find source in database: {source}")
+                        continue
+
+                samples = Sample.objects.filter(sample_id=sample_id)
+                if len(samples) == 0:
+                    messages.error(request, f"Sample ID {sample_id} does not exist.")
+                    continue
+
+                for sample in samples:
+                    # Ideally we wouldn't need to loop as there should only be one sample with a given sample ID
+                    if SampleCollectionEntry.objects.filter(sample_collection=sample_collection, sample=sample).count() > 0:
+                        messages.error(request, f"Sample {sample} already added to Sample Collection {sample_collection}.")
+                        continue
+
+                    sampleCollectionEntry = SampleCollectionEntry()
+                    sampleCollectionEntry.sample_collection = sample_collection
+                    sampleCollectionEntry.sample = sample
+                    sampleCollectionEntry.date_created = timezone.now()
+                    sampleCollectionEntry.last_updated = timezone.now()
+                    if id_in_collection:
+                        sampleCollectionEntry.id_in_collection = id_in_collection
+                    if source:
+                        sampleCollectionEntry.source = source
+                    try:
+                        sampleCollectionEntry.save()
+                    except IntegrityError:
                         continue
             return
 
