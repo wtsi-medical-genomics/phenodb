@@ -358,7 +358,9 @@ class BulkUploadAdmin(admin.ModelAdmin):
                     continue
                                         
                 ## insert phenotype values
-                for col in line:                      
+                for col in line:
+                    if col in ['centre', 'centre_id']:
+                        continue
                     self.saveUpdatePhenotype(phenotype_value=line[col],
                         phenotype_name=col,
                         individual=ind,
