@@ -154,7 +154,11 @@ class BinarySampleFeatureValue(models.Model):
     sample_feature_value = models.BooleanField()
     date_created = models.DateTimeField()
     last_updated = models.DateTimeField()
-    
+    date_measured = models.DateField()
+
+    class Meta:
+        unique_together = ('sample', 'sample_feature', 'date_measured')
+
     def __str__(self):
         return self.sample_feature_value
     
@@ -164,6 +168,10 @@ class QualitativeSampleFeatureValue(models.Model):
     sample_feature_value = models.CharField(max_length=200)
     date_created = models.DateTimeField()
     last_updated = models.DateTimeField()
+    date_measured = models.DateField()
+
+    class Meta:
+        unique_together = ('sample', 'sample_feature', 'date_measured')
     
     def __str__(self):
         return self.sample_feature_value
@@ -174,6 +182,10 @@ class QuantitiatveSampleFeatureValue(models.Model):
     sample_feature_value = models.DecimalField(max_digits=10, decimal_places=2)
     date_created = models.DateTimeField()
     last_updated = models.DateTimeField()
+    date_measured = models.DateField()
+    
+    class Meta:
+        unique_together = ('sample', 'sample_feature', 'date_measured')
     
     def __str__(self):
         return self.sample_feature_value    
