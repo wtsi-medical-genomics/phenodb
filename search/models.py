@@ -157,7 +157,7 @@ class BinarySampleFeatureValue(models.Model):
         unique_together = ('sample', 'date_measured')
 
     def __str__(self):
-        return self.sample_feature_value
+        return str(self.sample_feature_value)
 
 class QualitativeSampleFeatureValue(models.Model):
     sample_feature = models.ForeignKey(SampleFeature)

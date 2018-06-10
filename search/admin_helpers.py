@@ -83,8 +83,10 @@ def add_sample(centre, centre_id, sample_id):
         sampleIndId = IndividualIdentifier.objects.get(individual_string=centre_id,source_id=source.id)
     except IndividualIdentifier.DoesNotExist:
         raise Exception(u"Individual " + centre_id + u" NOT found in phenodb")
-    
-    ## check that a sample has not already been entered for the ind with the same name
+
+    # Check if the sample id exists at all (ie not just attached to that centre_id)
+
+    # check that a sample has not already been entered for the ind with the same name
     if Sample.objects.filter(individual=sampleIndId.individual,sample_id=sample_id).count() > 0:
         raise Exception(u"Sample ID '" + sample_id + u"' already added for this individual")
 
@@ -152,6 +154,79 @@ def add_phenotype_values(centre, centre_id, phenotypes):
             individual=ind,
             individual_identifier=sampleIndId
         )
+
+
+def add_sample_features(centre, centre_id, sample_id, date_measured, sample_features):
+    try:
+        source = Source.objects.get(source_name=centre)
+    except Source.DoesNotExist:
+        raise Exception(u"Can't find source in database '" + centre + u"'")
+
+    try:
+        individual_identifier = IndividualIdentifier.objects.get(individual_string=centre_id,source_id=source.id)
+    except IndividualIdentifier.DoesNotExist:
+        raise Exception(u"Individual " + centre_id + u" NOT found in phenodb")
+    individual = individual_identifier.individual
+
+    samples = Sample.objects.filter(individual=individual,sample_id=sample_id)
+    if samples.count() == 0:
+        raise Exception(f"Sample ID {sample_id} not married to individual {centre}, {centre_id}")
+    if samples.count() > 1:
+        raise Exception(f"More than one Sample ID found for {sample_id}, {centre}, {centre_id}")
+    sample = samples[0]
+
+    date_measured = datetime.datetime.strptime(date_measured, '%Y%m%d')
+
+    for sample_feature_name, sample_feature_value in sample_features.items():
+        update_sample_feature(
+            sample_feature_name=sample_feature_name,
+            sample_feature_value=sample_feature_value,
+            sample=sample,
+            date_measured=date_measured
+        )
+
+
+def update_sample_feature(sample_feature_name, sample_feature_value, sample, date_measured):
+
+    if not sample_feature_value or not len(str(sample_feature_value )):
+        raise Exception(f'No sample feature value: {sample_feature_value }')
+
+    if type(sample_feature_value) is str:
+        sample_feature_value = sample_feature_value.strip().lower()
+
+    try:
+        sample_feature = SampleFeature.objects.get(sample_feature_name=sample_feature_name)
+    except ObjectDoesNotExist:
+        raise Exception(f'Warning Can\'t find sample feature {sample_feature_name} in database')
+
+    if sample_feature.sample_feature_type.sample_feature_type == 'binary':
+        try:
+            sample_feature_value = pe.binary[sample_feature_value]
+        except KeyError:
+            keys = ', '.join(pe.binary.keys())
+            raise Exception(f'binary values must be one of: ({keys})')
+        model = BinarySampleFeatureValue
+    elif sample_feature.sample_feature_type.sample_feature_type == 'qualitative':
+        model = QualitativeSampleFeatureValue
+    elif sample_feature.sample_feature_type.sample_feature_type == 'quantitative':
+        model = QuantitiatveSampleFeatureValue
+    else:
+        raise Exception(f'unrecognised sample feature type {sample_feature.sample_feature_type.sample_feature_type}')
+    if model.objects.filter(sample_feature=sample_feature, sample=sample, date_measured=date_measured).exists():
+        sf = model.objects.get(sample_feature=sample_feature, sample=sample, date_measured=date_measured)
+        sf.sample_feature_value = sample_feature_value
+    else:
+        sf = model()
+        sf.sample_feature = sample_feature
+        sf.sample = sample
+        sf.sample_feature_value = sample_feature_value
+        sf.date_measured = date_measured
+        sf.date_created = timezone.now()
+        sf.last_updated = timezone.now()
+    try:
+        sf.save()
+    except:
+        raise Exception(f'failed to save {sample_feature.sample_feature_name} for {sample.sample_id}')
 
 
 def saveUpdatePhenotype(phenotype_value, phenotype_name, individual, individual_identifier):

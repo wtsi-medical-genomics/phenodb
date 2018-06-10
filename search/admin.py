@@ -477,26 +477,29 @@ class BulkUploadAdmin(admin.ModelAdmin):
             return
         
         elif import_data_type == "add_sample_feature_values":
-            
-            sample_feature = SampleFeature.objects.get(id=request.POST["sample_feature_id"])
-            
             records = read_csv(request.FILES["file_to_import"], file_delimiter)
-            
-            for line in records:   
-                
-                ## check that the input data columns we expect are there
+            for line in records:
                 try:
                     sample_id = line['sample_id']
-                    sample_feature_value = line['sample_feature_value']                    
                 except KeyError:
-                    messages.error(request, u"Input file is missing required column(s) 'sample_id sample_feature_value'")
+                    messages.error(request, u"Input file is missing required column sample_id")
                     return
+
+                sample_features = {}
+                for col in line:
+                    if col not in ['sample_id']:
+                        sample_features[col] = line[col]
                 
-                ## find the sample and give an error if it can't be found
-                
-                ## insert the sample feature value
-                
-            
+                try:
+                    helpers.add_sample_features(
+                        centre=centre,
+                        centre_id=centre_id,
+                        sample_id=sample_id,
+                        sample_features=sample_features,
+                    )
+                except Exception as e:
+                    messages.error(request, e)
+
             return
         
         elif import_data_type == "check_samples_in_warehouse":
@@ -514,7 +517,8 @@ class BulkUploadAdmin(admin.ModelAdmin):
                 if Sample.objects.filter(sample_id=sample_id).exists(): 
                     continue
                 else:
-                    warehouseCursor.execute("SELECT DISTINCT sanger_sample_id, supplier_name, cohort, country_of_origin, geographical_region  FROM samples WHERE name = %s ORDER BY checked_at desc", sample_id)
+                    q = f"SELECT DISTINCT sanger_sample_id, supplier_name, cohort, country_of_origin, geographical_region  FROM samples WHERE name = '{sample_id}' ORDER BY checked_at desc;"
+                    warehouseCursor.execute()
                     row = warehouseCursor.fetchone()
                     if row is None or row[0] is None:
 #                        out_file.write(sample_id + " NOT in warehouse\n")
