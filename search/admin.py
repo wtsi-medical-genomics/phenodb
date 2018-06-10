@@ -738,7 +738,7 @@ class BulkUploadAdmin(admin.ModelAdmin):
                 qualVal.individual = individual
                 qualVal.phenotype_value = phenotype_value
                 qualVal.date_created = timezone.now()
-                qualVal.last_updated = timezone.now()                        
+                qualVal.last_updated = timezone.now()
             try:
                 qualVal.save()
             except:
@@ -777,7 +777,7 @@ class PlatformAdmin(admin.ModelAdmin):
     list_display = ('platform_name', 'platform_type', 'platform_description')
 
 class PhenotypeAdmin(admin.ModelAdmin):
-    list_display = ('phenotype_name', 'phenotype_type', 'phenotype_description')                     
+    list_display = ('phenotype_name', 'phenotype_type', 'phenotype_description')
                      
 class StudyAdmin(admin.ModelAdmin):
     list_display = ('study_name', 'platform', 'study_description')

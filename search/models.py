@@ -143,7 +143,7 @@ class SampleFeature(models.Model):
     sample_feature_description = models.TextField()
 
     def __str__(self):
-        return self.sample_feature_name    
+        return self.sample_feature_name
     
 class BinarySampleFeatureValue(models.Model):
     sample_feature = models.ForeignKey(SampleFeature)
@@ -151,17 +151,25 @@ class BinarySampleFeatureValue(models.Model):
     sample_feature_value = models.BooleanField()
     date_created = models.DateTimeField()
     last_updated = models.DateTimeField()
+    date_measured = models.DateField()
     
+    class Meta:
+        unique_together = ('sample', 'date_measured')
+
     def __str__(self):
         return self.sample_feature_value
-    
+
 class QualitativeSampleFeatureValue(models.Model):
     sample_feature = models.ForeignKey(SampleFeature)
     sample = models.ForeignKey(Sample)
     sample_feature_value = models.CharField(max_length=200)
     date_created = models.DateTimeField()
     last_updated = models.DateTimeField()
-    
+    date_measured = models.DateField()
+
+    class Meta:
+        unique_together = ('sample', 'date_measured')
+
     def __str__(self):
         return self.sample_feature_value
 
@@ -171,9 +179,13 @@ class QuantitiatveSampleFeatureValue(models.Model):
     sample_feature_value = models.DecimalField(max_digits=10, decimal_places=2)
     date_created = models.DateTimeField()
     last_updated = models.DateTimeField()
-    
+    date_measured = models.DateField()
+
+    class Meta:
+        unique_together = ('sample', 'date_measured')
+
     def __str__(self):
-        return self.sample_feature_value    
+        return self.sample_feature_value
     
 class Source(models.Model):
     source_name = models.CharField(max_length=100, unique=True)
@@ -221,4 +233,4 @@ class MissingSampleID(models.Model):
         unique_together = ('sample_id', 'study',)
     
 class BulkUpload(models.Model):
-    pass    
+    pass

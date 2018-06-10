@@ -12,6 +12,12 @@ sex = {
     'female' : 'Female',
 }
 
+disease_type = {
+    'uc'   : 'Ulcerative Colitis',
+    'cd'   : 'Crohns Disease', 
+    'ibdu' : 'Indeterminate'
+}
+
 binary = {
     'yes'       : True,
     '1'         : True,
