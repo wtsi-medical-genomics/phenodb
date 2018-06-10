@@ -9,6 +9,8 @@ import csv
 from decimal import *
 from io import TextIOWrapper
 from . import phenotype_encoding as pe
+from . import admin_helpers as helpers
+
 
 def read_csv(csvFile, delimiter):
     # pdb.set_trace()
@@ -155,7 +157,6 @@ class BulkUploadAdmin(admin.ModelAdmin):
             records = read_csv(request.FILES["file_to_import"], file_delimiter)
             
             for line in records:
-                                
                 try:
                     working_id = line['working_id']
                     remove_id = line['remove_id'] 
@@ -264,117 +265,45 @@ class BulkUploadAdmin(admin.ModelAdmin):
                 try:
                     centre = line['centre']
                     centre_id = line['centre_id']
-#                     sample_id = line['sample_id']                    
                 except KeyError:
                     messages.error(request, u"Input file is missing required column(s) 'centre centre_id'")
-                    return     
-                
-                try:
-                    source = Source.objects.get(source_name=centre)
-                except Source.DoesNotExist:
-                    messages.error(request, f'Can\'t find source in database {centre}')
-                    continue
-                               
-                ## check if the id has already been entered for the given source
-                if IndividualIdentifier.objects.filter(individual_string=centre_id,source_id=source.id).count() > 0:
-                    messages.error(request, u"Individual '" + centre_id + u"' already added for this source")
-                    continue
-                
-                ## the individual id from another file might be similar but not exactly the same
-                ## check if the sample id and source are the same, if they are then add an individual identifier
-#                 
-#                 try:
-#                     if Sample.objects.get(sample_id=sample_id):
-#                 
-#                         sample = Sample.objects.get(sample_id=sample_id)
-#                         
-#                         if IndividualIdentifier.objects.get(individual=sample.individual, source__source_name=centre):
-#                         
-#                             ## add a individual identifier
-#                             indId = IndividualIdentifier()
-#                             indId.individual = sample.individual
-#                             indId.individual_string = centre_id                
-#                             indId.source = source
-#                             indId.date_created = timezone.now()
-#                             indId.last_updated = timezone.now()                
-#                             try:
-#                                 indId.save()
-#                             except IntegrityError:
-#                                 messages.error(request, u"centre_id " + centre_id + " is already in the database")
-#                             continue
-#                 except Sample.DoesNotExist:
-#                     pass
-                
-                ## an empty active_id field means that the object refers to itself!
-                ## if the active_id field is not empty, that means it refers to another individual object
-                ind = Individual()                
-                ind.date_created = timezone.now()
-                ind.last_updated = timezone.now()
-                ind.save()                    
-                
-                ## create the phenodb_id
-                pdbId = PhenodbIdentifier()
-                pdbId.individual = ind
-                pdbId.phenodb_id = u"pdb" + str(ind.pk)
-                pdbId.date_created = timezone.now()
-                pdbId.last_updated = timezone.now()
-                pdbId.save()
-                
+                    return
                 try:
                     collection = line['collection']
-                    coll = Collection.objects.get(collection_name=collection)
-                except Collection.DoesNotExist:
-                    messages.error(request, u"Can't find collection in database '" + collection + u"'")
-                    collection = None
                 except KeyError:
                     collection = None
-                    
-                if collection is not None:
-                    indColl = IndividualCollection()
-                    indColl.individual = ind
-                    indColl.collection = coll
-                    indColl.date_created = timezone.now()
-                    indColl.last_updated = timezone.now()
-                    indColl.save()
-                      
-                ## insert the individual identifier
-                indId = IndividualIdentifier()
-                indId.individual = ind
-                indId.individual_string = centre_id                
-                indId.source = source
-                indId.date_created = timezone.now()
-                indId.last_updated = timezone.now()                
+
+                phenotypes = {}
+                for col in line:
+                    if col not in ['centre', 'centre_id', 'collection']:
+                        phenotypes[col] = line[col]
+
                 try:
-                    indId.save()
-                except IntegrityError:
-                    messages.error(request, u"centre_id " + centre_id + " is already in the database")
-                    continue
-                                        
-                ## insert phenotype values
-                for col in line:                      
-                    self.saveUpdatePhenotype(phenotype_value=line[col],
-                        phenotype_name=col,
-                        individual=ind,
-                        individual_identifier=indId,
-                        request=request)
+                    helpers.add_individual(
+                        centre=centre,
+                        centre_id=centre_id, 
+                        collection=collection,
+                        phenotypes=phenotypes
+                    )
+                except Exception as e:
+                    messages.error(request, e)
             return
             
         elif import_data_type == "phenotypes":
-            # import pdb; pdb.set_trace()
             records = read_csv(request.FILES["file_to_import"], file_delimiter)
             
             for line in records:
                 try:
                     name = line['name']
-                    type = line['type']
+                    ptype = line['type']
                     description = line['description']
                 except KeyError:
                     messages.error(request, "Input file is missing required column(s) 'name type description'")
                     return
                 try:
-                    phenoType = PhenotypeType.objects.get(phenotype_type=type)
+                    phenoType = PhenotypeType.objects.get(phenotype_type=ptype)
                 except PhenotypeType.DoesNotExist:
-                    messages.error(request, f"Phenotype Type {type} was NOT found in phenodb for {name}")
+                    messages.error(request, f"Phenotype Type {ptype} was NOT found in phenodb for {name}")
                     continue
                          
                 pheno = Phenotype()
@@ -459,95 +388,26 @@ class BulkUploadAdmin(admin.ModelAdmin):
         elif import_data_type == "samples":
             
             records = read_csv(request.FILES["file_to_import"], file_delimiter)
-            
+
             for line in records:
                 
                 try:
                     centre = line['centre']
                     centre_id = line['centre_id']
-                    sample_id = line['sample_id']                    
+                    sample_id = line['sample_id']
                 except KeyError:
                     messages.error(request, u"Input file is missing required column(s) 'centre centre_id sample_id'")
-                    return     
-                
+                    return
+
                 try:
-                    source = Source.objects.get(source_name=centre)
-                except Source.DoesNotExist:
-                    messages.error(request, u"Can't find source in database '" + centre + u"'")
-                    continue                
-                
-                ## check if the id has already been entered for the given source
-                try:
-                    sampleIndId = IndividualIdentifier.objects.get(individual_string=centre_id,source_id=source.id)
-                except IndividualIdentifier.DoesNotExist:
-                    messages.error(request, u"Individual " + centre_id + u" NOT found in phenodb")
-                    continue
-                
-                ## check that a sample has not already been entered for the ind with the same name
-                if Sample.objects.filter(individual=sampleIndId.individual,sample_id=sample_id).count() > 0:
-                    messages.error(request, u"Sample ID '" + sample_id + u"' already added for this individual")                
-                    continue
-                          
-                sample = Sample()
-                sample.individual = sampleIndId.individual
-                sample.sample_id = sample_id
-                sample.date_created = timezone.now()
-                sample.last_updated = timezone.now()
-                
-                warehouseCursor = connections['warehouse'].cursor()
-                
-                ## if the sanger warehouse is not available then skip this step and warn the user
-                try: 
-                    warehouseCursor.execute("SELECT DISTINCT sanger_sample_id, supplier_name, gender FROM current_samples WHERE name = %s ORDER BY checked_at desc", sample.sample_id)
-                    row = warehouseCursor.fetchone()
-                    if row is None:
-                        messages.error(request, u"Sample " + sample.sample_id + u" NOT found in warehouse")  
-                        continue
-                    if row[0] is None:
-                        messages.error(request, u"Sample " + sample.sample_id + u" NOT found in warehouse")
-                        continue  
-                    if row[1] != sampleIndId.individual_string:
-                        messages.error(request, u"supplier name " + str(sampleIndId.individual_string) + u" does not match warehouse "  + row[1])                        
-                        
-                        ## insert the new individual identifier
-                        indId = IndividualIdentifier()
-                        indId.individual = sampleIndId.individual
-                        indId.individual_string = row[1]
-                        indId.source = source
-                        indId.date_created = timezone.now()
-                        indId.last_updated = timezone.now()
-                        try:
-                            indId.save()
-                        except IntegrityError:
-                            pass
-                except DatabaseError:
-                    messages.error(request, u"Can't connect to warehouse database")                    
-                                                                                                           
-                try:
-                    sample.save()
-                except IntegrityError:
-#                   messages.error(request, u"Sample " + sample_id + " is already in the database")
-                    continue
-                
-                ## now the sample is inserted check if it was a missing sample
-                if MissingSampleID.objects.filter(sample_id=sample_id).count() > 0:
-                    missingSamples = MissingSampleID.objects.filter(sample_id=sample_id)
-                    
-                    for missingSample in missingSamples:
-                        
-                        studySample = StudySample()
-                        studySample.sample = sample
-                        studySample.study = missingSample.study
-                        studySample.date_created = timezone.now()
-                        studySample.last_updated = timezone.now()     
-                
-                        try:
-                            studySample.save()
-                        except IntegrityError:
-                            continue
-                        
-                        missingSample.delete()
-                
+                    helpers.add_sample(
+                        centre=centre,
+                        centre_id=centre_id,
+                        sample_id=sample_id
+                    )
+                except Exception as e:
+                    messages.error(request, e)
+
             return
         
         elif import_data_type == "add_sample_on_sample":
@@ -595,32 +455,25 @@ class BulkUploadAdmin(admin.ModelAdmin):
                 
                 try:
                     centre = line['centre']
-                    centre_id = line['centre_id']                    
+                    centre_id = line['centre_id']
                 except KeyError:
                     messages.error(request, u"Input file is missing required column(s) 'centre centre_id'")
                     return
                 
-                try:
-                    source = Source.objects.get(source_name=centre)
-                except Source.DoesNotExist:
-                    messages.error(request, u"Can't find source in database '" + centre + u"'")
-                    continue 
-                
-                ## get the individual
-                try:
-                    sampleIndId = IndividualIdentifier.objects.get(individual_string=centre_id,source_id=source.id)
-                except IndividualIdentifier.DoesNotExist:
-                    messages.error(request, u"Individual " + centre_id + u" NOT found in phenodb")
-                    continue
-                
-                ind = sampleIndId.individual
-                
+                phenotypes = {}
                 for col in line:
-                    self.saveUpdatePhenotype(phenotype_value=line[col],
-                        phenotype_name=col,
-                        individual=ind,
-                        individual_identifier=sampleIndId,
-                        request=request)
+                    if col not in ['centre', 'centre_id']:
+                        phenotypes[col] = line[col]
+
+                try:
+                    helpers.add_phenotype_values(
+                        centre=centre,
+                        centre_id=centre_id,
+                        phenotypes=phenotypes
+                    )
+                except Exception as e:
+                    messages.error(request, e)
+
             return
         
         elif import_data_type == "add_sample_feature_values":
@@ -671,106 +524,102 @@ class BulkUploadAdmin(admin.ModelAdmin):
                         continue
             return
 
-    def saveUpdatePhenotype(self, phenotype_value, phenotype_name, individual, individual_identifier, request):
-        """
-            This function creates/updates phenotypes and is called when import type
-            is both `add_phenotype_values` and `individuals`.
-        """
-        if not phenotype_value or len(phenotype_value) == 0:
-            return
+def saveUpdatePhenotype(phenotype_value, phenotype_name, individual, individual_identifier):
+    """
+        This function creates/updates phenotypes and is called when import type
+        is both `add_phenotype_values` and `individuals`.
+    """
+    if not phenotype_value or len(phenotype_value) == 0:
+        return
 
+    try:
+        pheno = Phenotype.objects.get(phenotype_name=phenotype_name)
+    except ObjectDoesNotExist:
+        raise Exception(f'Warning Can\'t find phenotype {phenotype_name} in database')
+
+    phenotype_value = phenotype_value.strip().lower()
+
+    if pheno.phenotype_type.phenotype_type == 'binary':
         try:
-            pheno = Phenotype.objects.get(phenotype_name=phenotype_name)
-        except ObjectDoesNotExist:
-            messages.error(request, f"Warning Can't find phenotype '{phenotype_name}' in database")
+            phenotype_value = pe.binary[phenotype_value]
+        except KeyError:
+            keys = ', '.join(pe.binary.keys())
+            raise Exception(f'binary values must be one of: ({keys})')
+
+        # Check if the phenotype already exists - this is only relevant really
+        # to the instance in which import_data_type == "add_phenotype_values", but in the
+        # case of import_data_type == "individuals" the following if will never be true
+        # (as the individual has been added)
+        if BinaryPhenotypeValue.objects.filter(phenotype=pheno, individual=individual).exists():
+            affectVal = BinaryPhenotypeValue.objects.get(phenotype=pheno, individual=individual)
+            affectVal.phenotype_value = phenotype_value
+        else:
+            affectVal = BinaryPhenotypeValue()
+            affectVal.phenotype = pheno
+            affectVal.individual = individual
+            affectVal.phenotype_value = phenotype_value
+            affectVal.date_created = timezone.now()
+            affectVal.last_updated = timezone.now()
+        try:
+            affectVal.save()
+        except:
+            raise Exception(f'failed to save {pheno.phenotype_name} for {individual_identifier.individual_string}')
+
+    elif pheno.phenotype_type.phenotype_type == "qualitative":
+
+        # Encode sex
+        if pheno.phenotype_name == 'Sex':
+            try:
+                phenotype_value = pe.sex[phenotype_value]
+            except KeyError:
+                keys = ', '.join(pe.sex.keys())
+                raise Exception(f'sex values must be one of: ({keys})')
+
+        # Check if the phenotype already exists - this is only relevant really
+        # to the instance in which import_data_type == "add_phenotype_values", but in the
+        # case of import_data_type == "individuals" the following if will never be true
+        # (as the individual has been added)
+        if QualitativePhenotypeValue.objects.filter(phenotype=pheno, individual=individual).exists():
+            qualVal = QualitativePhenotypeValue.objects.get(phenotype=pheno, individual=individual)
+            qualVal.phenotype_value = phenotype_value
+        else:
+            qualVal = QualitativePhenotypeValue()
+            qualVal.phenotype = pheno
+            qualVal.individual = individual
+            qualVal.phenotype_value = phenotype_value
+            qualVal.date_created = timezone.now()
+            qualVal.last_updated = timezone.now()
+        try:
+            qualVal.save()
+        except:
+            raise Exception(f'failed to save {pheno.phenotype_name} for {individual_identifier.individual_string}')
+
+    elif pheno.phenotype_type.phenotype_type == 'quantitative':
+        if phenotype_value.isdigit():
+            phenotype_value = Decimal(phenotype_value)
+        else:
             return
 
-        phenotype_value = phenotype_value.strip().lower()
-
-        if pheno.phenotype_type.phenotype_type == 'binary':
-            try:
-                phenotype_value = pe.binary[phenotype_value]
-            except KeyError:
-                keys = ', '.join(pe.binary.keys())
-                messages.error(request, f'binary values must be one of: ({keys})')
-                return
-
-            # Check if the phenotype already exists - this is only relevant really
-            # to the instance in which import_data_type == "add_phenotype_values", but in the
-            # case of import_data_type == "individuals" the following if will never be true
-            # (as the individual has been added)
-            if BinaryPhenotypeValue.objects.filter(phenotype=pheno, individual=individual).exists():
-                affectVal = BinaryPhenotypeValue.objects.get(phenotype=pheno, individual=individual)
-                affectVal.phenotype_value = phenotype_value
-            else:
-                affectVal = BinaryPhenotypeValue()
-                affectVal.phenotype = pheno
-                affectVal.individual = individual
-                affectVal.phenotype_value = phenotype_value
-                affectVal.date_created = timezone.now()
-                affectVal.last_updated = timezone.now()
-            try:
-                affectVal.save()
-            except:
-                messages.error(request, f'failed to save {pheno.phenotype_name} for {individual_identifier.individual_string}')
-
-        elif pheno.phenotype_type.phenotype_type == "qualitative":
-
-            # Encode sex
-            if pheno.phenotype_name == 'Sex':
-                try:
-                    phenotype_value = pe.sex[phenotype_value]
-                except KeyError:
-                    keys = ', '.join(pe.sex.keys())
-                    messages.error(request, f'sex values must be one of: ({keys})')
-                    return
-
-            # Check if the phenotype already exists - this is only relevant really
-            # to the instance in which import_data_type == "add_phenotype_values", but in the
-            # case of import_data_type == "individuals" the following if will never be true
-            # (as the individual has been added)
-            if QualitativePhenotypeValue.objects.filter(phenotype=pheno, individual=individual).exists():
-                qualVal = QualitativePhenotypeValue.objects.get(phenotype=pheno, individual=individual)
-                qualVal.phenotype_value = phenotype_value
-            else:
-                qualVal = QualitativePhenotypeValue()
-                qualVal.phenotype = pheno
-                qualVal.individual = individual
-                qualVal.phenotype_value = phenotype_value
-                qualVal.date_created = timezone.now()
-                qualVal.last_updated = timezone.now()
-            try:
-                qualVal.save()
-            except:
-                messages.error(request, f'failed to save {pheno.phenotype_name} for {individual_identifier.individual_string}')
-
-        elif pheno.phenotype_type.phenotype_type == 'quantitative':
-            if phenotype_value.isdigit():
-                phenotype_value = Decimal(phenotype_value)
-            else:
-                return
-
-            # Check if the phenotype already exists - this is only relevant really
-            # to the instance in which import_data_type == "add_phenotype_values", but in the
-            # case of import_data_type == "individuals" the following if will never be true
-            # (as the individual has been added)
-            if QuantitiatvePhenotypeValue.objects.filter(phenotype=pheno, individual=individual).exists():
-                quantVal = QuantitiatvePhenotypeValue.objects.get(phenotype=pheno, individual=individual)
-                quantVal.phenotype_value = phenotype_value
-            else:
-                quantVal = QuantitiatvePhenotypeValue()
-                quantVal.phenotype = pheno
-                quantVal.individual = individual
-                quantVal.phenotype_value = phenotype_value
-                quantVal.date_created = timezone.now()
-                quantVal.last_updated = timezone.now()
-            try:
-                quantVal.save()
-            except:
-                messages.error(request, f'failed to save {pheno.phenotype_name} for {individual_identifier.individual_string}')
+        # Check if the phenotype already exists - this is only relevant really
+        # to the instance in which import_data_type == "add_phenotype_values", but in the
+        # case of import_data_type == "individuals" the following if will never be true
+        # (as the individual has been added)
+        if QuantitiatvePhenotypeValue.objects.filter(phenotype=pheno, individual=individual).exists():
+            quantVal = QuantitiatvePhenotypeValue.objects.get(phenotype=pheno, individual=individual)
+            quantVal.phenotype_value = phenotype_value
         else:
-            messages.error(request, f'unrecognised phenotype type {pheno.phenotype_type.phenotype_type}')
-
+            quantVal = QuantitiatvePhenotypeValue()
+            quantVal.phenotype = pheno
+            quantVal.individual = individual
+            quantVal.phenotype_value = phenotype_value
+            quantVal.date_created = timezone.now()
+            quantVal.last_updated = timezone.now()
+        try:
+            quantVal.save()
+        except:
+            raise Exception(f'failed to save {pheno.phenotype_name} for {individual_identifier.individual_string}')
+    else:
+        raise Exception(f'unrecognised phenotype type {pheno.phenotype_type.phenotype_type}')
 
 
 class PlatformAdmin(admin.ModelAdmin):

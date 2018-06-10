@@ -65,10 +65,12 @@ def add_individual(centre, centre_id, collection=None, phenotypes=None):
     # insert phenotype values
     if phenotypes:
         for phenotype_name, phenotype_value in phenotypes.items():
-            saveUpdatePhenotype(phenotype_value=phenotype_value,
+            saveUpdatePhenotype(
+                phenotype_value=phenotype_value,
                 phenotype_name=phenotype_name,
                 individual=ind,
-                individual_identifier=indId)
+                individual_identifier=indId
+            )
 
 def add_sample(centre, centre_id, sample_id):
     try:
@@ -126,5 +128,27 @@ def add_sample(centre, centre_id, sample_id):
                 studySample.save()
             except IntegrityError:
                 continue
-
+                
             missingSample.delete()
+
+def add_phenotype_values(centre, centre_id, phenotypes):
+    try:
+        source = Source.objects.get(source_name=centre)
+    except Source.DoesNotExist:
+        raise Exception(u"Can't find source in database '" + centre + u"'")
+
+    # get the individual
+    try:
+        sampleIndId = IndividualIdentifier.objects.get(individual_string=centre_id,source_id=source.id)
+    except IndividualIdentifier.DoesNotExist:
+        raise Exception(u"Individual " + centre_id + u" NOT found in phenodb")
+
+    ind = sampleIndId.individual
+
+    for phenotype_name, phenotype_value in phenotypes.items():
+        saveUpdatePhenotype(
+            phenotype_value=phenotype_value,
+            phenotype_name=phenotype_name,
+            individual=ind,
+            individual_identifier=sampleIndId
+        )
