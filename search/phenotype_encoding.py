@@ -23,9 +23,11 @@ binary = {
     '1'         : True,
     'affected'  : True,
     'true'      : True,
+    True        : True,
 
     'no'        : False,
     'false'     : False,
     '0'         : False,
     'unaffected': False,
+    False       : False,
 }

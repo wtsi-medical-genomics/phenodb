@@ -128,7 +128,7 @@ def add_sample(centre, centre_id, sample_id):
                 studySample.save()
             except IntegrityError:
                 continue
-                
+
             missingSample.delete()
 
 def add_phenotype_values(centre, centre_id, phenotypes):
@@ -152,3 +152,102 @@ def add_phenotype_values(centre, centre_id, phenotypes):
             individual=ind,
             individual_identifier=sampleIndId
         )
+
+
+def saveUpdatePhenotype(phenotype_value, phenotype_name, individual, individual_identifier):
+    """
+        This function creates/updates phenotypes and is called when import type
+        is both `add_phenotype_values` and `individuals`.
+    """
+    if not phenotype_value or not len(str(phenotype_value)):
+        return
+
+    if type(phenotype_value) is str:
+        phenotype_value = phenotype_value.strip().lower()
+    
+    try:
+        pheno = Phenotype.objects.get(phenotype_name=phenotype_name)
+    except ObjectDoesNotExist:
+        raise Exception(f'Warning Can\'t find phenotype {phenotype_name} in database')
+
+    if pheno.phenotype_type.phenotype_type == 'binary':
+        try:
+            phenotype_value = pe.binary[phenotype_value]
+        except KeyError:
+            keys = ', '.join(pe.binary.keys())
+            raise Exception(f'binary values must be one of: ({keys})')
+
+        # Check if the phenotype already exists - this is only relevant really
+        # to the instance in which import_data_type == "add_phenotype_values", but in the
+        # case of import_data_type == "individuals" the following if will never be true
+        # (as the individual has been added)
+        if BinaryPhenotypeValue.objects.filter(phenotype=pheno, individual=individual).exists():
+            affectVal = BinaryPhenotypeValue.objects.get(phenotype=pheno, individual=individual)
+            affectVal.phenotype_value = phenotype_value
+        else:
+            affectVal = BinaryPhenotypeValue()
+            affectVal.phenotype = pheno
+            affectVal.individual = individual
+            affectVal.phenotype_value = phenotype_value
+            affectVal.date_created = timezone.now()
+            affectVal.last_updated = timezone.now()
+        try:
+            affectVal.save()
+        except:
+            raise Exception(f'failed to save {pheno.phenotype_name} for {individual_identifier.individual_string}')
+
+    elif pheno.phenotype_type.phenotype_type == "qualitative":
+
+        # Encode sex
+        if pheno.phenotype_name == 'Sex':
+            try:
+                phenotype_value = pe.sex[phenotype_value]
+            except KeyError:
+                keys = ', '.join(pe.sex.keys())
+                raise Exception(f'sex values must be one of: ({keys})')
+
+        # Check if the phenotype already exists - this is only relevant really
+        # to the instance in which import_data_type == "add_phenotype_values", but in the
+        # case of import_data_type == "individuals" the following if will never be true
+        # (as the individual has been added)
+        if QualitativePhenotypeValue.objects.filter(phenotype=pheno, individual=individual).exists():
+            qualVal = QualitativePhenotypeValue.objects.get(phenotype=pheno, individual=individual)
+            qualVal.phenotype_value = phenotype_value
+        else:
+            qualVal = QualitativePhenotypeValue()
+            qualVal.phenotype = pheno
+            qualVal.individual = individual
+            qualVal.phenotype_value = phenotype_value
+            qualVal.date_created = timezone.now()
+            qualVal.last_updated = timezone.now()
+        try:
+            qualVal.save()
+        except:
+            raise Exception(f'failed to save {pheno.phenotype_name} for {individual_identifier.individual_string}')
+
+    elif pheno.phenotype_type.phenotype_type == 'quantitative':
+        if phenotype_value.isdigit():
+            phenotype_value = Decimal(phenotype_value)
+        else:
+            return
+
+        # Check if the phenotype already exists - this is only relevant really
+        # to the instance in which import_data_type == "add_phenotype_values", but in the
+        # case of import_data_type == "individuals" the following if will never be true
+        # (as the individual has been added)
+        if QuantitiatvePhenotypeValue.objects.filter(phenotype=pheno, individual=individual).exists():
+            quantVal = QuantitiatvePhenotypeValue.objects.get(phenotype=pheno, individual=individual)
+            quantVal.phenotype_value = phenotype_value
+        else:
+            quantVal = QuantitiatvePhenotypeValue()
+            quantVal.phenotype = pheno
+            quantVal.individual = individual
+            quantVal.phenotype_value = phenotype_value
+            quantVal.date_created = timezone.now()
+            quantVal.last_updated = timezone.now()
+        try:
+            quantVal.save()
+        except:
+            raise Exception(f'failed to save {pheno.phenotype_name} for {individual_identifier.individual_string}')
+    else:
+        raise Exception(f'unrecognised phenotype type {pheno.phenotype_type.phenotype_type}')
