@@ -2,6 +2,7 @@ sex = {
     '0'      : 'Unknown',
     'unknown': 'Unknown',
     'other'  : 'Unknown',
+    'nan'    : 'Unknown',
     
     '1'      : 'Male',
     'm'      : 'Male',

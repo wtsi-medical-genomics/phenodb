@@ -154,7 +154,7 @@ class BinarySampleFeatureValue(models.Model):
     date_measured = models.DateField()
     
     class Meta:
-        unique_together = ('sample', 'date_measured')
+        unique_together = ('sample_feature', 'sample', 'date_measured')
 
     def __str__(self):
         return str(self.sample_feature_value)
@@ -168,7 +168,7 @@ class QualitativeSampleFeatureValue(models.Model):
     date_measured = models.DateField()
 
     class Meta:
-        unique_together = ('sample', 'date_measured')
+        unique_together = ('sample_feature', 'sample', 'date_measured')
 
     def __str__(self):
         return self.sample_feature_value
@@ -182,7 +182,7 @@ class QuantitiatveSampleFeatureValue(models.Model):
     date_measured = models.DateField()
 
     class Meta:
-        unique_together = ('sample', 'date_measured')
+        unique_together = ('sample_feature', 'sample', 'date_measured')
 
     def __str__(self):
         return self.sample_feature_value
