@@ -9,13 +9,10 @@ import io
 import time
 from collections import defaultdict, OrderedDict
 import pprint
-
+from django.views.decorators.csrf import csrf_exempt
 from .duplicates import get_duplicate_sampleIDs
-
-## Fudge required for generating plots in production because writing to sys.stdout is by default restricted in versions of mod_wsgi
-## This restriction can be disabled by mapping sys.stdout to sys.stderr at global scope within in the WSGI application script file.
-#import sys
-#sys.stdout = sys.stderr
+from django.contrib.auth import authenticate
+import re
 
 # internal imports
 from .models import IndividualIdentifier, BinaryPhenotypeValue, QualitativePhenotypeValue, QuantitiatvePhenotypeValue, Phenotype, Platform, Individual, Study, Sample, Source, QC, Collection, StudySample, PhenodbIdentifier, MissingSampleID
@@ -233,8 +230,136 @@ def generate_html_table(output, query_results):
 
     return "".join((table_html, "</table>"))
 
+def convert_api_request_to_phenodb_style_query(query):
+    tables = []
+    wheres = []
+    where_iss = []
+    querystrs = []
+    andors = []
+
+    output = []
+    search_in = []
+    page = []
+
+    if 'phenotypes' in query:
+        for phenotype_name, phenotype_values in query['phenotypes'].items():
+            phenotype_id = get_phenotype_id(phenotype_name)
+            if isinstance(phenotype_values, str):
+                phenotype_values = [phenotype_values]
+            if isinstance(phenotype_values, list):
+                for index, phenotype_value in enumerate(phenotype_values):
+                    try:
+                        relation, value = parse_phenotype_query_value(phenotype_value)
+                    except Exception as e:
+                        print(e, end='\n\n')
+                    else:
+                        tables.append('phenotype')
+                        wheres.append(phenotype_id)
+                        where_iss.append(relation)
+                        querystrs.append(value)
+                        if index == len(phenotype_values) - 1:
+                            andors.append('and')
+                        else:
+                            andors.append('or')
+            if isinstance(phenotype_values, dict):
+                for phenotype_value, boolean in phenotype_values.items():
+                    boolean = bool(boolean)
+                    tables.append('phenotype')
+                    wheres.append(phenotype_id)
+                    if boolean:
+                        where_iss.append('eq')
+                    else:
+                        where_iss.append('neq')
+                    querystrs.append(phenotype_value)
+                    andors.append('and')
+
+    if 'study' in query:
+        study_values = query['study']
+        if isinstance(study_values, str):
+            study_values = [study_values]
+        if isinstance(study_values, list):
+            for index, study_name in enumerate(study_values):
+                tables.append('study')
+                study_id = get_study_id(study_name)
+                wheres.append(study_id)
+                where_iss.append('true')
+                querystrs.append('')
+                if index == len(study_name) - 1:
+                    andors.append('and')
+                else:
+                    andors.append('or')
+        if isinstance(study_values, dict):
+            for study_name, boolean in study_values.items():
+                boolean = bool(boolean)
+                tables.append('study')
+                study_id = get_study_id(study_name)
+                wheres.append(study_id)
+                if boolean:
+                    where_iss.append('eq')
+                else:
+                    where_iss.append('neq')
+                querystrs.append('')
+                andors.append('and')
+
+    search_in = 'all'
+
+    return tables, wheres, where_iss, querystrs, search_in, andors
+
+def get_study_id(study_name):
+    study_objects = Study.objects.filter(study_name=study_name)
+    if len(study_objects) == 0:
+        print(f'{study_name} not found')
+    if len(study_objects) > 1:
+        print(f'{study_name} found more than one study')
+    study_id = study_objects[0].id
+    return study_id
+
+
+def get_phenotype_id(phenotype_name):
+    phenotype_objects = Phenotype.objects.filter(phenotype_name=phenotype_name)
+    if len(phenotype_objects) == 0:
+        print(f'{phenotype_name} not found')
+    if len(phenotype_objects) > 1:
+        print(f'{phenotype_name} found more than one phenotype')
+    phenotype_id = phenotype_objects[0].id
+    return phenotype_id
+
+def parse_phenotype_query_value(value):
+    relation_mapping = {
+        '>' : 'gt',
+        '>=': 'gte',
+        '<' : 'lt',
+        '<=': 'lte',
+        None: 'eq',
+    }
+    p = re.compile(r'^(>=|<=|<|>)?([A-Za-z0-9\.\s]+)$')
+    m = p.match(value)
+    if not m:
+        raise Exception(f'Query {value} ill-formed')
+    groups = m.groups()
+    ngroups = len(groups)
+    return relation_mapping[groups[0]], groups[1]
+
+@csrf_exempt
+def APIQuery(request):
+    print(request.POST)
+    username = request.POST['username']
+    password = request.POST['password']
+    user = authenticate(request, username=username, password=password)
+    print(user)
+    query = json.loads(request.POST.get('query'))
+    _ = convert_api_request_to_phenodb_style_query(query)
+    tables, wheres, where_iss, querystrs, search_in, andors = _
+    query_results, _ = perform_queries(request, tables, wheres, where_iss, querystrs, andors)
+    print(query_results)
+    query_results = {x[0] for x in query_results}
+    results_json = get_all_output_json_data(query_results)
+    return HttpResponse(results_json, content_type="application/javascript")
+
+
 def querybuilder(request):
     if request.method == 'POST':
+        print(request.POST)
         results_per_page = 25     # default value
         tables    = request.POST.getlist('from')
         wheres    = request.POST.getlist('where')
@@ -535,6 +660,41 @@ def parse_query_results(query_results):
         query_result_objs.append({'identifier':ind.id})
 
     return query_result_objs
+
+def get_all_output_json_data(phenodbids):
+    IndividualIdentifier.objects.filter(individual_id__in=phenodbids)
+    results = {phenodbid: {} for phenodbid in phenodbids}
+    query_set = IndividualIdentifier.objects.filter(individual_id__in=phenodbids)
+    for q in query_set:
+        phenodbid = q.individual_id
+        supplierid = q.individual_string
+        supplier = q.source.source_name
+
+        if 'supplier:supplier_id' not in results[phenodbid]:
+            results[phenodbid]['supplier:supplier_id'] = []
+        results[phenodbid]['supplier:supplier_id'].append(f'{supplier}:{supplierid}')
+
+        if 'supplier_id' not in results[phenodbid]:
+            results[phenodbid]['supplier_id'] = []
+        results[phenodbid]['supplier_id'].append(supplierid)
+
+    study_sample_query_set = StudySample.objects.filter(sample__individual_id__in=phenodbids)
+    for q in study_sample_query_set:
+        phenodbid = q.sample.individual_id
+        sample_id = q.sample.sample_id
+        study_name = q.study.study_name
+        platform_name = q.study.platform.platform_name
+        if 'study:sample_id' not in results[phenodbid]:
+            results[phenodbid]['study:sample_id'] = []
+        results[phenodbid]['study:sample_id'].append(f'{study_name}:{sample_id}')
+        if 'sample_id' not in results[phenodbid]:
+            results[phenodbid]['sample_id'] = []
+        results[phenodbid]['sample_id'].append(sample_id)
+        if 'platform' not in results[phenodbid]:
+            results[phenodbid]['platform'] = []
+        results[phenodbid]['platform'].append(platform_name)
+
+    return json.dumps(results)
 
 def get_output_data(page_results, output_columns):
 

@@ -25,5 +25,6 @@ urlpatterns = [
     url(r'^samples/$', views.showSamples, name='showSamples'),
     url(r'^samples/data$', views.getSampleData, name='getSampleData'),
     url(r'^duplicateSampleIDs/$', views.duplicateSampleIDs, name='duplicateSampleIDs'),
+    url(r'^API/query/$', views.APIQuery, name='APIQuery'),
     # url(r'^conflictingSampleIDs/$', views.conflictingSampleIDs, name='conflictingSampleIDs'),
 ]
